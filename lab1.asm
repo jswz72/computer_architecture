@@ -1,39 +1,49 @@
 .data
-hello_world: .asciiz "Hello world\n"
-other_string: .asciiz "abcdef"
+result: .asciiz "Result: "
+str1: .asciiz "asdf"
+str2: .asciiz "sad"
 .text
 
+main:
+	la	$a0, str1
+	la	$a1, str2
+	#call func
+	jal firstmatch
+	move	$t0, $v0  #store fm return in temp0
+	#show result string
+	la	$a0, result 
+	li	$v0, 4
+	syscall
+	#show stored result
+	move	$a0, $t0
+	li	$v0, 4
+	syscall
+	#exit
+	li	$v0, 10
+	syscall 
 
 firstmatch:
-	move $s1, $a0
-	move $s2, $a1	#move char *s1 and char *s2 to saved registers
-	add $s3, $zero, $s1	#s3 is equal to char *temp = s1
+	addi	$sp, $sp, -12	#make room for args and ra
+	sw	$ra, -8($sp)	#store return addr
+	sw	$a0, -4($sp)	#store first arg
+	sw	$a1, ($sp)	#store second arg
+	move	$s0, $a0	#s0 is first arg (temp)
 fm_loop:
-	la $a0, $s2
-	lw $a1, ($s3)	#load s2 and *temp into args
-	## do stack stuff??
-	jal strchr
-	## do stack stuff?? to get s3 back?
-	beq $v0, $zero, fm_continue
-	move $v0, $s3
-	jr $ra
+	move	$a0, $a1	#pass s2 as first arg
+	lb	$a1, ($s0)	#pass *temp as secon arg
+	jal	strchr
+	### todo
+	beq	$v0, $zero, fm_continue	#continue with loop if zero returned
 	
-rm_continue:
-	addi $s3, $s3, 4	*temp++
-	lw $t1, ($s3)		#t1 = *temp
-	beq $t1, $zero, rm_ret_0  #return 0 if *temp == 0
-	j fm_loop
-	
-rm_ret_0:
-	li $v0, 0
-	jr $ra
+	li	$v0, 10
+	syscall
 	
 strchr:
 sc_loop:
-	lw $t1, ($a0)	#t1 == *s
-	beq $t1, $a1, sc_ret #return if *s == c
-	addi $a0, $a0, 4	#increment pointer
-	lw $t2, ($a0)	#t2 = *s new value
+	lb $t1, ($a0)		#t1 == *s
+	beq $t1, $a1, sc_ret_char #return if *s == c
+	addi $a0, $a0, 1	#increment pointer
+	lb $t2, ($a0)		#t2 = *s new value
 	beq $t2, $zero, sc_ret_0  #return zero if value is 0 (null char?)
 	j sc_loop
 
@@ -43,11 +53,3 @@ sc_ret_char:
 sc_ret_0:
 	li $v0, 0
 	jr $ra
-	
-	
-##helo world
-la $a0,  hello_world
-li $v0, 4 
-syscall
-li $v0, 10
-syscall
