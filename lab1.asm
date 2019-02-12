@@ -15,8 +15,8 @@ main:
 	li	$v0, 4
 	syscall
 	#show stored result
-	move	$a0, $t0
-	li	$v0, 4
+	lb	$a0, ($t0)	#get char from returned addr
+	li	$v0, 11		#syscall for print char
 	syscall
 	#exit
 	li	$v0, 10
@@ -34,9 +34,23 @@ fm_loop:
 	jal	strchr
 	### todo
 	beq	$v0, $zero, fm_continue	#continue with loop if zero returned
+	move	$v0, $s0	#move temp to return
+	lw	$ra, -8($sp)	#get back ret addr
+	addi	$sp, $sp, 12	#pop used stack space
+	jr 	$ra
+
+fm_continue:
+	addi	$s0, $s0, 1	#increment temp ptr
+	lb	$t0, ($s0)	#to = *temp
+	beq	$t0, $zero, fm_ret_0
+	j	fm_loop
+
+fm_ret_0:
+	li	$v0, 0
+	lw	$ra, -8($sp)	#get back ret addr
+	addi	$sp, $sp, 12	#pop stack
+	jr	$ra
 	
-	li	$v0, 10
-	syscall
 	
 strchr:
 sc_loop:
