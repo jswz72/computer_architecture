@@ -1,3 +1,7 @@
+# Jacob Sword & Daniel Richter
+# Computer Architecture and Design (IEECE 4820)
+# Lab Assignment 1
+
 .data
 result: .asciiz "Result: "
 nomatch: .asciiz "No Matches Found"
