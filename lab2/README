@@ -1,0 +1,15 @@
+To build program:
+
+$ make
+
+=> will generate a binary called sim.
+
+To clean up compilation:
+
+$ make clean
+
+To run program:
+
+$ ./sim PROGRAM
+
+PROGRAM is MIPS machine code in a hexadecimal format.
