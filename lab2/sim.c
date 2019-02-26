@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "shell.h"
 
+// todo carry flag
+
 enum InstructType {R, I, J};
 
 // General
@@ -103,6 +105,9 @@ void add()
     int32_t res = rs_val + rt_val;
     check_overflow(rs_val, rt_val, res);
     NEXT_STATE.REGS[rd] = res;
+    if (NEXT_STATE.REGS[rd] < 0)
+        NEXT_STATE.FLAG_N = 1;
+
 }
 
 void addu() 
@@ -117,11 +122,17 @@ void sub()
     int32_t res = rs_val + rt_val;
     check_overflow(rs_val, rt_val, res);
     NEXT_STATE.REGS[rd] = res;
+    if (NEXT_STATE.REGS[rd] < 0)
+        NEXT_STATE.FLAG_N = 1;
+
 }
 
 void subu() 
 {
 	NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
+    if (NEXT_STATE.REGS[rd] < 0)
+        NEXT_STATE.FLAG_N = 1;
+
 }
 
 void slt() 
@@ -159,6 +170,8 @@ void execute_r()
 			break;
 	}
 	inc_pc(0);
+    if (!NEXT_STATE.REGS[rd])
+        NEXT_STATE.FLAG_Z = 1;
 }
 
 
@@ -194,11 +207,20 @@ void addi()
     int32_t res = rs_val + imm;
     check_overflow(rs_val, imm, res);
     NEXT_STATE.REGS[rt] = res;
+    if (!NEXT_STATE.REGS[rt])
+        NEXT_STATE.FLAG_Z = 1;
+    if (NEXT_STATE.REGS[rt] < 0)
+        NEXT_STATE.FLAG_N = 1;
+
+
+
 }
 
 void addiu()
 {
 	NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + imm;
+    if (!NEXT_STATE.REGS[rt])
+        NEXT_STATE.FLAG_Z = 1;
 }
 
 void slti()
@@ -210,16 +232,25 @@ void ori()
 {
     // 0-extend imm
     NEXT_STATE.REGS[rt] = NEXT_STATE.REGS[rs] | (0X0000FFFF & imm);
+    if (!NEXT_STATE.REGS[rt])
+        NEXT_STATE.FLAG_Z = 1;
+
 }
 
 void lui()
 {
     NEXT_STATE.REGS[rt] = imm << 16;
+    if (!NEXT_STATE.REGS[rt])
+        NEXT_STATE.FLAG_Z = 1;
+
 }
 
 void lw()
 {
     NEXT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + imm);
+    if (!NEXT_STATE.REGS[rt])
+        NEXT_STATE.FLAG_Z = 1;
+
 }
 void sw()
 {
@@ -264,8 +295,17 @@ void execute_i()
 		inc_pc(0);
 }
 
+void clear_flags()
+{
+    NEXT_STATE.FLAG_N = 0;
+    NEXT_STATE.FLAG_Z = 0;
+    NEXT_STATE.FLAG_V = 0;
+    NEXT_STATE.FLAG_C = 0;
+}
+
 void execute()
 {
+    clear_flags();
 	if (instruct_type == R)
 		execute_r();
 	if (instruct_type == J)
