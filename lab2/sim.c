@@ -19,7 +19,7 @@ static uint32_t funct;
 static uint32_t rd;
 
 // I type
-static uint32_t imm;
+static int32_t imm;
 
 // J type
 static uint32_t addr;
