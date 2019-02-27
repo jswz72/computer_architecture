@@ -47,7 +47,11 @@ void decode_r()
 
 void decode_j()
 {
+    // Get 26 bits for instruction
 	addr = instruction & 0X3FFFFFF;
+    // Final instruction shifted by 2, with 4 high bites from next pc
+    addr <<= 2;
+    addr = ((CURRENT_STATE.PC + 4) & 0XF0000000) | addr;
 }
 
 int32_t sign_extend(int16_t a)
