@@ -40,13 +40,13 @@ void fetch()
 
 void decode_r()
 {
-	funct = instruction & 0x3F; // 6 ones
+	funct = instruction & 0x3F;
 	instruction >>= 11;
-	rd = instruction & 0x1F; //5 ones
+	rd = instruction & 0x1F;
 	instruction >>= 5;
-	rt = instruction & 0x1F; //5 ones
+	rt = instruction & 0x1F;
 	instruction >>= 5;
-	rs = instruction & 0x1F; //5 ones
+	rs = instruction & 0x1F;
 }
 
 void decode_j()
@@ -112,27 +112,35 @@ void add()
 
 void addu() 
 {
-	NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
+    uint32_t rs_val = CURRENT_STATE.REGS[rs];
+    uint32_t rt_val = CURRENT_STATE.REGS[rt];
+    unsigned int res = rs_val + rt_val;
+    if (res > UINT32_MAX)
+        NEXT_STATE.FLAG_C = 1;
+	NEXT_STATE.REGS[rd] = (uint32_t) res;
 }
 
 void sub() 
 {
     int32_t rs_val = CURRENT_STATE.REGS[rs];
     int32_t rt_val = CURRENT_STATE.REGS[rt];
-    int32_t res = rs_val + rt_val;
+    int32_t res = rs_val - rt_val;
     check_overflow(rs_val, rt_val, res);
-    NEXT_STATE.REGS[rd] = res;
-    if (NEXT_STATE.REGS[rd] < 0)
+    if (res < 0)
         NEXT_STATE.FLAG_N = 1;
-
+    NEXT_STATE.REGS[rd] = res;
 }
 
 void subu() 
 {
-	NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
-    if (NEXT_STATE.REGS[rd] < 0)
+    uint32_t rs_val = CURRENT_STATE.REGS[rs];
+    uint32_t rt_val = CURRENT_STATE.REGS[rt];
+    int res = rs_val - rt_val;
+    if (res < INT32_MIN)
+        NEXT_STATE.FLAG_C = 1;
+    if (res < 0)
         NEXT_STATE.FLAG_N = 1;
-
+	NEXT_STATE.REGS[rd] = res;
 }
 
 void slt() 
@@ -207,20 +215,21 @@ void addi()
     int32_t res = rs_val + imm;
     check_overflow(rs_val, imm, res);
     NEXT_STATE.REGS[rt] = res;
-    if (!NEXT_STATE.REGS[rt])
+    if (!res)
         NEXT_STATE.FLAG_Z = 1;
-    if (NEXT_STATE.REGS[rt] < 0)
+    if (res < 0)
         NEXT_STATE.FLAG_N = 1;
-
-
-
 }
 
 void addiu()
 {
-	NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + imm;
-    if (!NEXT_STATE.REGS[rt])
+    uint32_t rs_val = CURRENT_STATE.REGS[rs];
+    int res = rs_val + (uint32_t) imm;
+    if (res > UINT32_MAX)
+        NEXT_STATE.FLAG_C = 1;
+    if (!res)
         NEXT_STATE.FLAG_Z = 1;
+	NEXT_STATE.REGS[rt] = res;
 }
 
 void slti()
@@ -234,7 +243,6 @@ void ori()
     NEXT_STATE.REGS[rt] = NEXT_STATE.REGS[rs] | (0X0000FFFF & imm);
     if (!NEXT_STATE.REGS[rt])
         NEXT_STATE.FLAG_Z = 1;
-
 }
 
 void lui()
@@ -250,8 +258,8 @@ void lw()
     NEXT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + imm);
     if (!NEXT_STATE.REGS[rt])
         NEXT_STATE.FLAG_Z = 1;
-
 }
+
 void sw()
 {
     mem_write_32(CURRENT_STATE.REGS[rs] + imm, CURRENT_STATE.REGS[rt]);
