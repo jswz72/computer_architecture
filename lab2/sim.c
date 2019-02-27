@@ -32,10 +32,6 @@ void inc_pc(int offset)
 void fetch()
 {
     instruction = mem_read_32(CURRENT_STATE.PC);
-	if (instruction == 0) {
-		RUN_BIT = 0;
-		return;
-	}
 }
 
 void decode_r()
@@ -76,6 +72,10 @@ void decode_i()
 
 void decode()
 {
+    if (!instruction) {
+        RUN_BIT = 0;
+        return;
+    }
     opcode = instruction >> 26;
 	if (opcode == 0) {
 		instruct_type = R;
@@ -292,7 +292,7 @@ void execute_i()
 		case 15:
 			lui();
 			break;
-		case 34:
+		case 35:
 			lw();
 			break;
 		case 43:
@@ -313,6 +313,8 @@ void clear_flags()
 
 void execute()
 {
+    if (!RUN_BIT)
+        return;
     clear_flags();
 	if (instruct_type == R)
 		execute_r();
