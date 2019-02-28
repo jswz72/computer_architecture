@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "shell.h"
 
-// todo carry flag
-
 enum InstructType {R, I, J};
 
 // General
@@ -10,30 +8,53 @@ static uint32_t instruction;
 static uint32_t opcode;
 enum InstructType instruct_type;
 
-// R type or i type
+// R or I type only
 static uint32_t rs;
 static uint32_t rt;
 
-// R type
+// R type only
 static uint32_t funct;
 static uint32_t rd;
 
-// I type
+// I type only
 static int32_t imm;
 
-// J type
+// J type only
 static uint32_t addr;
 
+
+/*************** HELPERS ****************/
 void inc_pc(int offset)
 {
 	NEXT_STATE.PC = CURRENT_STATE.PC + 4 + offset;
 }
 
-void fetch()
+int32_t sign_extend(int16_t a)
 {
-    instruction = mem_read_32(CURRENT_STATE.PC);
+    int mask = 0x8000;
+    if (mask & a) {
+        a = a | 0xFFFF0000;
+    }
+    return a;
 }
 
+void check_overflow(int32_t a, int32_t b, int32_t res) {
+    if (a > 0 && b > 0 && res < 0
+            || a < 0 && b < 0 && res > 0) {
+        NEXT_STATE.FLAG_V = 1;
+    }
+}
+
+void clear_flags()
+{
+    NEXT_STATE.FLAG_N = 0;
+    NEXT_STATE.FLAG_Z = 0;
+    NEXT_STATE.FLAG_V = 0;
+    NEXT_STATE.FLAG_C = 0;
+}
+
+
+/*************** DECODE FUNCS ****************/
 void decode_r()
 {
 	funct = instruction & 0x3F;
@@ -54,14 +75,6 @@ void decode_j()
     addr = ((CURRENT_STATE.PC + 4) & 0XF0000000) | addr;
 }
 
-int32_t sign_extend(int16_t a)
-{
-    int mask = 0x8000;
-    if (mask & a) {
-        a = a | 0xFFFF0000;
-    }
-    return a;
-}
 
 void decode_i()
 {
@@ -74,34 +87,7 @@ void decode_i()
 }
 
 
-void decode()
-{
-    if (!instruction) {
-        RUN_BIT = 0;
-        return;
-    }
-    opcode = instruction >> 26;
-	if (opcode == 0) {
-		instruct_type = R;
-		decode_r();
-	}
-	else if (opcode == 2 || opcode == 3) {
-		instruct_type = J;
-		decode_j();
-	}
-	else if (opcode > 3) {
-		instruct_type = I;
-		decode_i();
-	}
-}
-
-void check_overflow(int32_t a, int32_t b, int32_t res) {
-    if (a > 0 && b > 0 && res < 0
-            || a < 0 && b < 0 && res > 0) {
-        NEXT_STATE.FLAG_V = 1;
-    }
-}
-
+/*************** R-TYPE EXEC FUNCS ****************/
 void add() 
 {
     int32_t rs_val = CURRENT_STATE.REGS[rs];
@@ -189,6 +175,7 @@ void execute_r()
 
 
 
+/*************** I-TYPE EXEC FUNCS ****************/
 void beq()
 {
 	int offset = 0;
@@ -307,6 +294,7 @@ void execute_i()
 		inc_pc(0);
 }
 
+/*************** J-TYPE EXEC FUNC ****************/
 void execute_j()
 {
     if (opcode == 2)
@@ -320,12 +308,31 @@ void execute_j()
 
 }
 
-void clear_flags()
+/*************** MAIN FUNCS ****************/
+void fetch()
 {
-    NEXT_STATE.FLAG_N = 0;
-    NEXT_STATE.FLAG_Z = 0;
-    NEXT_STATE.FLAG_V = 0;
-    NEXT_STATE.FLAG_C = 0;
+    instruction = mem_read_32(CURRENT_STATE.PC);
+}
+
+void decode()
+{
+    if (!instruction) {
+        RUN_BIT = 0;
+        return;
+    }
+    opcode = instruction >> 26;
+	if (opcode == 0) {
+		instruct_type = R;
+		decode_r();
+	}
+	else if (opcode == 2 || opcode == 3) {
+		instruct_type = J;
+		decode_j();
+	}
+	else if (opcode > 3) {
+		instruct_type = I;
+		decode_i();
+	}
 }
 
 void execute()
