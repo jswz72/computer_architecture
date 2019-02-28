@@ -307,6 +307,19 @@ void execute_i()
 		inc_pc(0);
 }
 
+void execute_j()
+{
+    if (opcode == 2)
+        // j
+		NEXT_STATE.PC = addr;
+    else if (opcode == 3) {
+        // jal
+        NEXT_STATE.REGS[31] = CURRENT_STATE.PC + 4;
+        NEXT_STATE.PC = addr;
+    }
+
+}
+
 void clear_flags()
 {
     NEXT_STATE.FLAG_N = 0;
@@ -323,7 +336,7 @@ void execute()
 	if (instruct_type == R)
 		execute_r();
 	if (instruct_type == J)
-		NEXT_STATE.PC = addr;
+        execute_j();
 	if (instruct_type == I)
 		execute_i();
 }
