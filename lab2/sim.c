@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include "shell.h"
 
+/**
+ * Computer Architecture EECE.4820
+ * Lab 2
+ * Jacob Sword and Daniel Richter
+ * sim.c
+ */
+
 enum InstructType {R, I, J};
 
 // General
