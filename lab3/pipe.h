@@ -16,6 +16,46 @@ typedef struct CPU_State_Struct {
   int FLAG_C;        /* carry flag */
 } CPU_State;
 
+/**
+ * Pipeline register between fetch and decode stages
+ * instruction: the hex instruction
+ * op: ALU operation
+ * rs: operand register
+ * rt: operand register
+ * rd: destination register
+ **/
+typedef struct Pipe_Reg_IFDE_Struct {
+    uint32_t instruction;
+} Pipe_Reg_IFDE;
+
+/**
+ * Pipeline register between decode and execute stages
+ * ALUop: ALU operation
+ * rs: first decoded opearand
+ * rt: second decoded operand
+ * rd: result destination
+ **/
+typedef struct Pipe_Reg_IDEX_Struct {
+    uint32_t ALUop;
+    uint32_t opcode; // TODO
+    int32_t rs;
+    int32_t rt;
+    uint32_t rd;
+    uint32_t addr;  //TODO
+    int32_t imm;   // TODO
+} Pipe_Reg_IDEX;
+
+/**
+ * Pipeline register between decode and execute stages
+ * data: results of execution
+ * dest: result destination
+ **/
+typedef struct Pipe_Reg_EXMEM_Struct {
+    int32_t data;
+    int32_t offset;
+    uint32_t dest;
+} Pipe_Reg_EXMEM;
+
 int RUN_BIT;
 
 /* global variable -- pipeline state */
