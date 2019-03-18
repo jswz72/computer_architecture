@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include "shell.h"
 
+/**
+ * Computer Architecture EECE.4820
+ * Lab 2
+ * Jacob Sword and Daniel Richter
+ * sim.c
+ */
+
 enum InstructType {R, I, J};
 
 // General
@@ -31,6 +38,7 @@ void inc_pc(int offset)
 
 int32_t sign_extend(int16_t a)
 {
+    // Extend the 16th bit
     int mask = 0x8000;
     if (mask & a) {
         a = a | 0xFFFF0000;
@@ -39,8 +47,9 @@ int32_t sign_extend(int16_t a)
 }
 
 void check_overflow(int32_t a, int32_t b, int32_t res) {
-    if (a > 0 && b > 0 && res < 0
-            || a < 0 && b < 0 && res > 0) {
+    // If both a and b signs same, ans sign must be same
+    if ((a > 0 && b > 0 && res < 0)
+            || (a < 0 && b < 0 && res > 0)) {
         NEXT_STATE.FLAG_V = 1;
     }
 }
@@ -57,6 +66,7 @@ void clear_flags()
 /*************** DECODE FUNCS ****************/
 void decode_r()
 {
+    // Use masks to get parts of instruction, shift for next part
 	funct = instruction & 0x3F;
 	instruction >>= 11;
 	rd = instruction & 0x1F;
@@ -105,6 +115,7 @@ void addu()
     uint32_t rs_val = CURRENT_STATE.REGS[rs];
     uint32_t rt_val = CURRENT_STATE.REGS[rt];
     unsigned int res = rs_val + rt_val;
+    // check for carry bit
     if (res > UINT32_MAX)
         NEXT_STATE.FLAG_C = 1;
 	NEXT_STATE.REGS[rd] = (uint32_t) res;
@@ -126,6 +137,7 @@ void subu()
     uint32_t rs_val = CURRENT_STATE.REGS[rs];
     uint32_t rt_val = CURRENT_STATE.REGS[rt];
     int res = rs_val - rt_val;
+    // check for carry bit
     if (res < INT32_MIN)
         NEXT_STATE.FLAG_C = 1;
     if (res < 0)
@@ -180,7 +192,7 @@ void beq()
 {
 	int offset = 0;
 	if (CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt])
-		offset = imm * 4; // todo check
+		offset = imm * 4;
 	inc_pc(offset);
 }
 
@@ -188,7 +200,7 @@ void bne()
 {
 	int offset = 0;
 	if (CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt])
-		offset = imm * 4; // todo check
+		offset = imm * 4;
 	inc_pc(offset);
 }
 
@@ -196,7 +208,7 @@ void bgtz()
 {
 	int offset = 0;
 	if (CURRENT_STATE.REGS[rs] > 0)
-		offset = imm * 4; // todo check
+		offset = imm * 4;
 	inc_pc(offset);
 }
 
@@ -230,7 +242,7 @@ void slti()
 
 void ori()
 {
-    // 0-extend imm
+    // 0-extend immediate value
     NEXT_STATE.REGS[rt] = NEXT_STATE.REGS[rs] | (0X0000FFFF & imm);
     if (!NEXT_STATE.REGS[rt])
         NEXT_STATE.FLAG_Z = 1;
@@ -238,6 +250,7 @@ void ori()
 
 void lui()
 {
+    // load imm into upper 16 bits
     NEXT_STATE.REGS[rt] = imm << 16;
     if (!NEXT_STATE.REGS[rt])
         NEXT_STATE.FLAG_Z = 1;
