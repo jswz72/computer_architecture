@@ -16,45 +16,42 @@ typedef struct CPU_State_Struct {
   int FLAG_C;        /* carry flag */
 } CPU_State;
 
-/**
- * Pipeline register between fetch and decode stages
- * instruction: the hex instruction
- * op: ALU operation
- * rs: operand register
- * rt: operand register
- * rd: destination register
- **/
 typedef struct Pipe_Reg_IFDE_Struct {
     uint32_t instruction;
+    uint32_t PCval;
+    uint32_t nop;
 } Pipe_Reg_IFDE;
 
-/**
- * Pipeline register between decode and execute stages
- * ALUop: ALU operation
- * rs: first decoded opearand
- * rt: second decoded operand
- * rd: result destination
- **/
 typedef struct Pipe_Reg_IDEX_Struct {
-    uint32_t ALUop;
-    uint32_t opcode; // TODO
-    int32_t rs;
-    int32_t rt;
-    uint32_t rd;
-    uint32_t addr;  //TODO
-    int32_t imm;   // TODO
+    uint32_t ALUfunc; // For ALU control
+    uint32_t opcode; // For main control of functionality in later stages
+    int32_t reg_val1; // Read reg data 1
+    int32_t reg_val2; // Read reg data 2
+    uint32_t dest;  // Destination register
+    uint32_t addr;  // For use with j-type
+    int32_t imm;   // For use in ALU with i-type
+    uint32_t PCval; // Propagate new PC value
+    uint32_t done;  // No more instructions left
+    uint32_t nop;
 } Pipe_Reg_IDEX;
 
-/**
- * Pipeline register between decode and execute stages
- * data: results of execution
- * dest: result destination
- **/
 typedef struct Pipe_Reg_EXMEM_Struct {
-    int32_t data;
-    int32_t offset;
-    uint32_t dest;
+    uint32_t opcode; // For control of load/store in mem stage
+    int32_t ALUresult; // Result of ALU computations (can be address depending on instruction)
+    uint32_t dest; // Destination register 
+    int32_t mem_write;  // Value to write to memory
+    uint32_t PCval; // Propagate new PC value with any changes from j-type or i-type instructions
+    uint32_t done;  // No more instructions left
+    uint32_t nop;
 } Pipe_Reg_EXMEM;
+
+typedef struct Pipe_Reg_MEMWB_Struct {
+    uint32_t data;  // Data to write to register
+    uint32_t dest;  // Destination register
+    uint32_t mem_to_reg;  // Controls whether data is written to dest register
+    uint32_t done;  // No more instructions left
+    uint32_t nop;
+} Pipe_Reg_MEMWB;
 
 int RUN_BIT;
 
