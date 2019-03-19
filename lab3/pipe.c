@@ -43,8 +43,11 @@ void pipe_stage_wb()
     if (PIPE_REG_MEMWB.nop)
         return;
     printf("WB Executing\n");
-    if (PIPE_REG_MEMWB.mem_to_reg) {
+    if (PIPE_REG_MEMWB.reg_write) {
+        printf("Writing to register %d\n", PIPE_REG_MEMWB.dest);
         CURRENT_STATE.REGS[PIPE_REG_MEMWB.dest] = PIPE_REG_MEMWB.data;
+        PIPE_REG_MEMWB.reg_wrote = PIPE_REG_MEMWB.dest;
+        PIPE_REG_MEMWB.wrote_val = PIPE_REG_MEMWB.data;
     }
     if (PIPE_REG_MEMWB.done)
         RUN_BIT = 0;
@@ -58,25 +61,23 @@ void pipe_stage_mem()
     if (PIPE_REG_EXMEM.done)
         return;
     printf("MEM Executing\n");
+    PIPE_REG_MEMWB.reg_write = PIPE_REG_EXMEM.reg_write;
     switch (PIPE_REG_EXMEM.opcode) {
         // LW
         case 35:
             PIPE_REG_MEMWB.data = mem_read_32(PIPE_REG_EXMEM.ALUresult);
-            PIPE_REG_MEMWB.mem_to_reg = 0;
             break;
         // SW
         case 43:
-            mem_write_32(PIPE_REG_EXMEM.ALUresult, PIPE_REG_EXMEM.mem_write);
-            PIPE_REG_MEMWB.mem_to_reg = 0;
+            mem_write_32(PIPE_REG_EXMEM.ALUresult, PIPE_REG_EXMEM.mem_write_val);
             break;
         default:
             // For other instructions, fwd data and dest to be written to reg
             PIPE_REG_MEMWB.data = PIPE_REG_EXMEM.ALUresult;
             PIPE_REG_MEMWB.dest = PIPE_REG_EXMEM.dest;
-            PIPE_REG_MEMWB.mem_to_reg = 1;
     }
     // Update PC
-    CURRENT_STATE.PC = PIPE_REG_EXMEM.PCval;
+    //CURRENT_STATE.PC = PIPE_REG_EXMEM.PCval;
     PIPE_REG_MEMWB.nop = 0;
 }
 
@@ -205,7 +206,7 @@ void lw()
 void sw()
 {
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.reg_val1 + PIPE_REG_IDEX.imm;
-    PIPE_REG_EXMEM.mem_write = PIPE_REG_IDEX.reg_val2;
+    PIPE_REG_EXMEM.mem_write_val = PIPE_REG_IDEX.reg_val2;
 }
 
 void execute_i()
@@ -257,6 +258,36 @@ void pipe_stage_execute()
     if (PIPE_REG_IDEX.done)
         return;
     printf("Ex Executing\n");
+
+    
+    // Forwarding
+    int exhazard1 = 0;
+    int exhazard2 = 0;
+    if (PIPE_REG_EXMEM.reg_write && PIPE_REG_EXMEM.dest) {
+        if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rs) {
+            printf("Yesx rs %d, %d\n", PIPE_REG_EXMEM.dest, PIPE_REG_EXMEM.ALUresult);
+            PIPE_REG_IDEX.reg_val1 = PIPE_REG_EXMEM.ALUresult;
+            exhazard1 = 1;
+        }
+        if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rt) {
+            printf("Yesx rt %d, %d\n", PIPE_REG_EXMEM.dest, PIPE_REG_EXMEM.ALUresult);
+            PIPE_REG_IDEX.reg_val2 = PIPE_REG_EXMEM.ALUresult;
+            exhazard2 = 1;
+        }
+    }
+    if (PIPE_REG_MEMWB.reg_wrote) {
+        // Don't fwd if exhazard already fwded
+        if (PIPE_REG_MEMWB.reg_wrote == PIPE_REG_IDEX.rs && !exhazard1) {
+            printf("Yesw rs %d, %d\n", PIPE_REG_MEMWB.reg_wrote, PIPE_REG_MEMWB.wrote_val);
+            PIPE_REG_IDEX.reg_val1 = PIPE_REG_MEMWB.wrote_val;
+        }
+        if (PIPE_REG_MEMWB.reg_wrote == PIPE_REG_IDEX.rt && !exhazard2) {
+            printf("Yesw rt %d, %d\n", PIPE_REG_MEMWB.reg_wrote, PIPE_REG_MEMWB.wrote_val);
+            PIPE_REG_IDEX.reg_val2 = PIPE_REG_MEMWB.wrote_val;
+        }
+    }
+
+
     uint32_t opcode = PIPE_REG_IDEX.opcode;
     if (opcode == 0) {
         execute_r();
@@ -268,6 +299,8 @@ void pipe_stage_execute()
     else if (opcode > 3)
         execute_i();
     PIPE_REG_EXMEM.opcode = opcode;
+    // Will write reg if not load or store (with current instruction set of project)
+    PIPE_REG_EXMEM.reg_write = !(opcode == 35 || opcode == 43);
     PIPE_REG_EXMEM.dest = PIPE_REG_IDEX.dest;
     PIPE_REG_EXMEM.nop = 0;
 }
@@ -280,10 +313,12 @@ void decode_r(uint32_t instruction)
 	PIPE_REG_IDEX.dest = instruction & 0x1F;
 	instruction >>= 5;
     // rt
-	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[instruction & 0x1F];
+    PIPE_REG_IDEX.rt = instruction & 0x1F;
+	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
 	instruction >>= 5;
     // rs
-	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[instruction & 0x1F];
+    PIPE_REG_IDEX.rs = instruction & 0x1F;
+	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
 }
 
 void decode_j(uint32_t instruction)

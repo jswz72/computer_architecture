@@ -25,8 +25,10 @@ typedef struct Pipe_Reg_IFDE_Struct {
 typedef struct Pipe_Reg_IDEX_Struct {
     uint32_t ALUfunc; // For ALU control
     uint32_t opcode; // For main control of functionality in later stages
-    int32_t reg_val1; // Read reg data 1
-    int32_t reg_val2; // Read reg data 2
+    uint32_t rs;    // Rs register (USED IN FWDING logic)
+    uint32_t rt;    // Rt register (USED IN FWDING logic)
+    int32_t reg_val1; // Read reg data 1 (value of rs)
+    int32_t reg_val2; // Read reg data 2 (valud of rt)
     uint32_t dest;  // Destination register
     uint32_t addr;  // For use with j-type
     int32_t imm;   // For use in ALU with i-type
@@ -38,8 +40,9 @@ typedef struct Pipe_Reg_IDEX_Struct {
 typedef struct Pipe_Reg_EXMEM_Struct {
     uint32_t opcode; // For control of load/store in mem stage
     int32_t ALUresult; // Result of ALU computations (can be address depending on instruction)
-    uint32_t dest; // Destination register 
-    int32_t mem_write;  // Value to write to memory
+    uint32_t dest; // Destination register (USED IN FWDING logic)
+    int32_t mem_write_val;  // Value to write to memory
+    int32_t reg_write;  // Whether or not register will be written
     uint32_t PCval; // Propagate new PC value with any changes from j-type or i-type instructions
     uint32_t done;  // No more instructions left
     uint32_t nop;
@@ -47,10 +50,14 @@ typedef struct Pipe_Reg_EXMEM_Struct {
 
 typedef struct Pipe_Reg_MEMWB_Struct {
     uint32_t data;  // Data to write to register
-    uint32_t dest;  // Destination register
-    uint32_t mem_to_reg;  // Controls whether data is written to dest register
+    uint32_t dest;  // Destination register (USED IN FWDING LOGIC)
+    uint32_t reg_write;  // Controls whether data is written to dest register
     uint32_t done;  // No more instructions left
     uint32_t nop;
+    // The register written to during the current cycle [because .data gets overwritten in the mem cycle due to sequential operation] (USED IN FWDING)
+    uint32_t reg_wrote;
+    // The value written during the current cycle [because .data gets overwritten in the mem cycle due to sequential operation] (USED IN FWDING)
+    int32_t wrote_val;
 } Pipe_Reg_MEMWB;
 
 int RUN_BIT;
