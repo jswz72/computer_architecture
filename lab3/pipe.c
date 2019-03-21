@@ -42,9 +42,7 @@ void pipe_stage_wb()
 {
     if (PIPE_REG_MEMWB.nop)
         return;
-    printf("WB Executing\n");
     if (PIPE_REG_MEMWB.reg_write) {
-        printf("Writing to register %d\n", PIPE_REG_MEMWB.dest);
         CURRENT_STATE.REGS[PIPE_REG_MEMWB.dest] = PIPE_REG_MEMWB.data;
         PIPE_REG_MEMWB.reg_wrote = PIPE_REG_MEMWB.dest;
         PIPE_REG_MEMWB.wrote_val = PIPE_REG_MEMWB.data;
@@ -60,7 +58,6 @@ void pipe_stage_mem()
     PIPE_REG_MEMWB.done = PIPE_REG_EXMEM.done;
     if (PIPE_REG_EXMEM.done)
         return;
-    printf("MEM Executing\n");
     // Mem-mem fwding
     if (PIPE_REG_MEMWB.dest == PIPE_REG_EXMEM.rt) {
         PIPE_REG_EXMEM.mem_write_val = PIPE_REG_MEMWB.data;
@@ -262,26 +259,17 @@ void pipe_stage_execute()
     PIPE_REG_EXMEM.done = PIPE_REG_IDEX.done;
     if (PIPE_REG_IDEX.done)
         return;
-    printf("Ex Executing\n");
 
     
     // Forwarding
     int exhazard1 = 0;
     int exhazard2 = 0;
-    if (PIPE_REG_IDEX.opcode == 43) {
-        printf("DEBUG\n\n");
-        printf("IDEXrt: %d, IDEXrs %d\n", PIPE_REG_IDEX.rt, PIPE_REG_IDEX.rs);
-        printf("rtval: %d, rsval %d\n", PIPE_REG_IDEX.reg_val2, PIPE_REG_IDEX.reg_val1);
-        printf("\n");
-    }
     if (PIPE_REG_EXMEM.reg_write && PIPE_REG_EXMEM.dest) {
         if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rs) {
-            printf("Yesx rs %d, %d\n", PIPE_REG_EXMEM.dest, PIPE_REG_EXMEM.ALUresult);
             PIPE_REG_IDEX.reg_val1 = PIPE_REG_EXMEM.ALUresult;
             exhazard1 = 1;
         }
         if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rt) {
-            printf("Yesx rt %d, %d\n", PIPE_REG_EXMEM.dest, PIPE_REG_EXMEM.ALUresult);
             PIPE_REG_IDEX.reg_val2 = PIPE_REG_EXMEM.ALUresult;
             exhazard2 = 1;
         }
@@ -289,11 +277,9 @@ void pipe_stage_execute()
     if (PIPE_REG_MEMWB.reg_wrote) {
         // Don't fwd if exhazard already fwded
         if (PIPE_REG_MEMWB.reg_wrote == PIPE_REG_IDEX.rs && !exhazard1) {
-            printf("Yesw rs %d, %d\n", PIPE_REG_MEMWB.reg_wrote, PIPE_REG_MEMWB.wrote_val);
             PIPE_REG_IDEX.reg_val1 = PIPE_REG_MEMWB.wrote_val;
         }
         if (PIPE_REG_MEMWB.reg_wrote == PIPE_REG_IDEX.rt && !exhazard2) {
-            printf("Yesw rt %d, %d\n", PIPE_REG_MEMWB.reg_wrote, PIPE_REG_MEMWB.wrote_val);
             PIPE_REG_IDEX.reg_val2 = PIPE_REG_MEMWB.wrote_val;
         }
     }
@@ -374,7 +360,6 @@ void pipe_stage_decode()
     PIPE_REG_IDEX.done = !instruction || PIPE_REG_IDEX.done;
     if (PIPE_REG_IDEX.done)
         return;
-    printf("Decode executing\n");
     uint32_t opcode = instruction >> 26;
     // Pass on PCval and opcode
     PIPE_REG_IDEX.opcode = opcode;
@@ -391,7 +376,6 @@ void pipe_stage_decode()
 
 void pipe_stage_fetch()
 {
-    printf("Fetch executing\n");
     // Read instruction from instruction memory
     PIPE_REG_IFDE.instruction = mem_read_32(CURRENT_STATE.PC);
     // Pass incremented PC value to next stages
