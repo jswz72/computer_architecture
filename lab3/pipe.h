@@ -45,6 +45,7 @@ typedef struct Pipe_Reg_EXMEM_Struct {
     int32_t reg_write;  // Whether or not register will be written
     uint32_t PCval; // Propagate new PC value with any changes from j-type or i-type instructions
     uint32_t done;  // No more instructions left
+    uint32_t rt;
     uint32_t nop;
 } Pipe_Reg_EXMEM;
 

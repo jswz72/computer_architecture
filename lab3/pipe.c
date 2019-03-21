@@ -61,14 +61,15 @@ void pipe_stage_mem()
     if (PIPE_REG_EXMEM.done)
         return;
     printf("MEM Executing\n");
+    // Mem-mem fwding
+    if (PIPE_REG_MEMWB.dest == PIPE_REG_EXMEM.rt) {
+        PIPE_REG_EXMEM.mem_write_val = PIPE_REG_MEMWB.data;
+    }
     PIPE_REG_MEMWB.reg_write = PIPE_REG_EXMEM.reg_write;
     switch (PIPE_REG_EXMEM.opcode) {
         // LW
         case 35:
             PIPE_REG_MEMWB.data = mem_read_32(PIPE_REG_EXMEM.ALUresult);
-            printf("DEBUG2\n\n");
-            printf("data: %d\n", PIPE_REG_MEMWB.data);
-            printf("reg_write: %d\n", PIPE_REG_MEMWB.reg_write);
             PIPE_REG_MEMWB.dest = PIPE_REG_EXMEM.dest;
             break;
         // SW
@@ -312,6 +313,7 @@ void pipe_stage_execute()
     // Will write reg if not load or store (with current instruction set of project)
     PIPE_REG_EXMEM.reg_write = opcode != 43; // TODO
     PIPE_REG_EXMEM.dest = PIPE_REG_IDEX.dest;
+    PIPE_REG_EXMEM.rt = PIPE_REG_IDEX.rt;
     PIPE_REG_EXMEM.nop = 0;
 }
 
