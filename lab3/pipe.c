@@ -66,6 +66,10 @@ void pipe_stage_mem()
         // LW
         case 35:
             PIPE_REG_MEMWB.data = mem_read_32(PIPE_REG_EXMEM.ALUresult);
+            printf("DEBUG2\n\n");
+            printf("data: %d\n", PIPE_REG_MEMWB.data);
+            printf("reg_write: %d\n", PIPE_REG_MEMWB.reg_write);
+            PIPE_REG_MEMWB.dest = PIPE_REG_EXMEM.dest;
             break;
         // SW
         case 43:
@@ -264,7 +268,10 @@ void pipe_stage_execute()
     int exhazard1 = 0;
     int exhazard2 = 0;
     if (PIPE_REG_IDEX.opcode == 43) {
-        printf("IDEXrt: %d, EXMEMrt %d\n", PIPE_REG_IDEX.rt, PIPE_REG_EXMEM.dest);
+        printf("DEBUG\n\n");
+        printf("IDEXrt: %d, IDEXrs %d\n", PIPE_REG_IDEX.rt, PIPE_REG_IDEX.rs);
+        printf("rtval: %d, rsval %d\n", PIPE_REG_IDEX.reg_val2, PIPE_REG_IDEX.reg_val1);
+        printf("\n");
     }
     if (PIPE_REG_EXMEM.reg_write && PIPE_REG_EXMEM.dest) {
         if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rs) {
@@ -303,7 +310,7 @@ void pipe_stage_execute()
         execute_i();
     PIPE_REG_EXMEM.opcode = opcode;
     // Will write reg if not load or store (with current instruction set of project)
-    PIPE_REG_EXMEM.reg_write = !(opcode == 35 || opcode == 43);
+    PIPE_REG_EXMEM.reg_write = opcode != 43; // TODO
     PIPE_REG_EXMEM.dest = PIPE_REG_IDEX.dest;
     PIPE_REG_EXMEM.nop = 0;
 }
