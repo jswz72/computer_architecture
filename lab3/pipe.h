@@ -20,6 +20,7 @@ typedef struct Pipe_Reg_IFDE_Struct {
     uint32_t instruction;
     uint32_t PCval;
     uint32_t nop;
+    uint32_t nofetch;
 } Pipe_Reg_IFDE;
 
 typedef struct Pipe_Reg_IDEX_Struct {
@@ -45,7 +46,7 @@ typedef struct Pipe_Reg_EXMEM_Struct {
     int32_t reg_write;  // Whether or not register will be written
     uint32_t PCval; // Propagate new PC value with any changes from j-type or i-type instructions
     uint32_t done;  // No more instructions left
-    uint32_t rt;
+    uint32_t rt;    // The rt register used (where mem_write_val comes from) (USED IN MEM-MEM FWDING)
     uint32_t nop;
 } Pipe_Reg_EXMEM;
 

@@ -259,7 +259,6 @@ void pipe_stage_execute()
     PIPE_REG_EXMEM.done = PIPE_REG_IDEX.done;
     if (PIPE_REG_IDEX.done)
         return;
-
     
     // Forwarding
     int exhazard1 = 0;
@@ -360,7 +359,20 @@ void pipe_stage_decode()
     PIPE_REG_IDEX.done = !instruction || PIPE_REG_IDEX.done;
     if (PIPE_REG_IDEX.done)
         return;
+
     uint32_t opcode = instruction >> 26;
+    if (opcode != 2) {
+        uint32_t rt = (instruction >> 16) & 0x1F;
+        uint32_t rs = (instruction >> 21) & 0x1F;
+        // LW
+        if (PIPE_REG_IDEX.opcode == 35) {
+            // Stall
+            if (PIPE_REG_IDEX.rt == rs || PIPE_REG_IDEX.rt == rt) {
+                PIPE_REG_IFDE.nofetch = 1;
+                PIPE_REG_IDEX.nop = 1;
+            }
+        }
+    }
     // Pass on PCval and opcode
     PIPE_REG_IDEX.opcode = opcode;
     PIPE_REG_IDEX.PCval = PIPE_REG_IFDE.PCval;
@@ -376,6 +388,10 @@ void pipe_stage_decode()
 
 void pipe_stage_fetch()
 {
+    if (PIPE_REG_IFDE.nofetch) {
+        PIPE_REG_IFDE.nofetch = 0;
+        return;
+    }
     // Read instruction from instruction memory
     PIPE_REG_IFDE.instruction = mem_read_32(CURRENT_STATE.PC);
     // Pass incremented PC value to next stages
