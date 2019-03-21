@@ -263,6 +263,9 @@ void pipe_stage_execute()
     // Forwarding
     int exhazard1 = 0;
     int exhazard2 = 0;
+    if (PIPE_REG_IDEX.opcode == 43) {
+        printf("IDEXrt: %d, EXMEMrt %d\n", PIPE_REG_IDEX.rt, PIPE_REG_EXMEM.dest);
+    }
     if (PIPE_REG_EXMEM.reg_write && PIPE_REG_EXMEM.dest) {
         if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rs) {
             printf("Yesx rs %d, %d\n", PIPE_REG_EXMEM.dest, PIPE_REG_EXMEM.ALUresult);
@@ -344,10 +347,12 @@ void decode_i(uint32_t instruction)
 {
     PIPE_REG_IDEX.imm = sign_extend(instruction & 0xFFFF);
 	instruction >>= 16;
-	PIPE_REG_IDEX.dest = instruction & 0x1F;
-	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[instruction & 0x1F];
+	PIPE_REG_IDEX.rt = instruction & 0x1F;
+	PIPE_REG_IDEX.dest = PIPE_REG_IDEX.rt;
+	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
 	instruction >>= 5;
-	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[instruction & 0x1F];
+    PIPE_REG_IDEX.rs = instruction & 0x1F;
+	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
 	instruction >>= 5;
 }
 
