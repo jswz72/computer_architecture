@@ -144,28 +144,30 @@ void execute_r() {
 }
 
 /*************** I-TYPE EXEC FUNCS ****************/
+void branch() {
+    CURRENT_STATE.PC = PIPE_REG_IDEX.PCval + PIPE_REG_IDEX.imm * 4;
+    PIPE_REG_IDEX.nop = 1;
+    PIPE_REG_IFDE.nofetch = 1;
+    PIPE_REG_IFDE.nop = 1;
+}
+
 void beq()
 {
-	int offset = 0;
-	if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2)
-		offset = PIPE_REG_IDEX.imm * 4;
-    PIPE_REG_EXMEM.PCval += offset;
+	if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2) {
+        branch();
+    }
 }
 
 void bne()
 {
-	int offset = 0;
 	if (PIPE_REG_IDEX.reg_val1 != PIPE_REG_IDEX.reg_val2)
-		offset = PIPE_REG_IDEX.imm * 4;
-    PIPE_REG_EXMEM.PCval += offset;
+        branch();
 }
 
 void bgtz()
 {
-	int offset = 0;
 	if (PIPE_REG_IDEX.reg_val1 > 0)
-		offset = PIPE_REG_IDEX.imm * 4;
-    PIPE_REG_EXMEM.PCval += offset;
+        branch();
 }
 
 void addi()
@@ -191,20 +193,17 @@ void ori()
         PIPE_REG_IDEX.reg_val1 | (0X0000FFFF & PIPE_REG_IDEX.imm);
 }
 
-// TODO
 void lui()
 {
     // load imm into upper 16 bits
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.imm << 16;
 }
 
-// TODO
 void lw()
 {
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.reg_val1 + PIPE_REG_IDEX.imm;
 }
 
-// TODO
 void sw()
 {
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.reg_val1 + PIPE_REG_IDEX.imm;
@@ -289,9 +288,6 @@ void pipe_stage_execute()
         execute_r();
         PIPE_REG_EXMEM.PCval = PIPE_REG_IDEX.PCval;
     }
-    else if (opcode == 2)
-        // J instruction
-        PIPE_REG_EXMEM.PCval = PIPE_REG_IDEX.addr;
     else if (opcode > 3)
         execute_i();
     PIPE_REG_EXMEM.opcode = opcode;
@@ -324,7 +320,7 @@ void decode_j(uint32_t instruction)
 	uint32_t addr = instruction & 0X3FFFFFF;
     // Final instruction shifted by 2, with 4 high bites from next pc
     addr <<= 2;
-    PIPE_REG_IDEX.addr = (PIPE_REG_IFDE.PCval & 0XF0000000) | addr;
+    CURRENT_STATE.PC = (PIPE_REG_IFDE.PCval & 0XF0000000) | addr;
 }
 
 int32_t sign_extend(int16_t a)
@@ -343,10 +339,12 @@ void decode_i(uint32_t instruction)
 	instruction >>= 16;
 	PIPE_REG_IDEX.rt = instruction & 0x1F;
 	PIPE_REG_IDEX.dest = PIPE_REG_IDEX.rt;
-	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
+    int32_t rt_val = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
+    PIPE_REG_IDEX.reg_val2 = rt_val;
 	instruction >>= 5;
     PIPE_REG_IDEX.rs = instruction & 0x1F;
-	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
+    int32_t rs_val = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
+    PIPE_REG_IDEX.reg_val1 = rs_val;
 	instruction >>= 5;
 }
 
@@ -379,8 +377,11 @@ void pipe_stage_decode()
 
 	if (opcode == 0)
 		decode_r(instruction);
-	else if (opcode == 2 || opcode == 3)
+	else if (opcode == 2) {
 		decode_j(instruction);
+        PIPE_REG_IFDE.nofetch = 1;
+        PIPE_REG_IFDE.nop = 1;
+    }
 	else if (opcode > 3)
 		decode_i(instruction);
     PIPE_REG_IDEX.nop = 0;
