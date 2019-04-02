@@ -1,6 +1,6 @@
 /*
  * MIPS pipeline timing simulator
- *
+ * Jacob Sword and Daniel Richter
  */
 
 #include "pipe.h"
@@ -48,8 +48,7 @@ void pipe_stage_wb()
         PIPE_REG_MEMWB.wrote_val = PIPE_REG_MEMWB.data;
     }
     if (PIPE_REG_MEMWB.done)
-        RUN_BIT = 0;
-}
+        RUN_BIT = 0; }
 
 void pipe_stage_mem()
 {
@@ -78,8 +77,6 @@ void pipe_stage_mem()
             PIPE_REG_MEMWB.data = PIPE_REG_EXMEM.ALUresult;
             PIPE_REG_MEMWB.dest = PIPE_REG_EXMEM.dest;
     }
-    // Update PC
-    //CURRENT_STATE.PC = PIPE_REG_EXMEM.PCval;
     PIPE_REG_MEMWB.nop = 0;
 }
 
@@ -91,7 +88,6 @@ void add()
 
 void addu()
 {
-    // overflow TODO?
     PIPE_REG_EXMEM.ALUresult = (uint32_t) (PIPE_REG_IDEX.reg_val1 + PIPE_REG_IDEX.reg_val2);
 }
 
@@ -102,7 +98,6 @@ void sub()
 
 void subu()
 {
-    // overflow TODO?
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.reg_val1 - PIPE_REG_IDEX.reg_val2;
 }
 
@@ -114,7 +109,6 @@ void slt()
 
 void sltu()
 {
-    // overflow TODO ?
     PIPE_REG_EXMEM.ALUresult = 
         PIPE_REG_IDEX.reg_val1 < PIPE_REG_IDEX.reg_val2;
 
@@ -153,9 +147,8 @@ void branch() {
 
 void beq()
 {
-	if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2) {
+	if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2)
         branch();
-    }
 }
 
 void bne()
@@ -177,7 +170,6 @@ void addi()
 
 void addiu()
 {
-    // overflow TODO?
     PIPE_REG_EXMEM.ALUresult = PIPE_REG_IDEX.reg_val1 + (uint32_t) PIPE_REG_IDEX.imm;
 }
 
@@ -291,8 +283,8 @@ void pipe_stage_execute()
     else if (opcode > 3)
         execute_i();
     PIPE_REG_EXMEM.opcode = opcode;
-    // Will write reg if not load or store (with current instruction set of project)
-    PIPE_REG_EXMEM.reg_write = opcode != 43; // TODO
+    // Will write reg if not store, branch, or jump
+    PIPE_REG_EXMEM.reg_write = (opcode != 43) && (opcode > 7 || opcode == 0);
     PIPE_REG_EXMEM.dest = PIPE_REG_IDEX.dest;
     PIPE_REG_EXMEM.rt = PIPE_REG_IDEX.rt;
     PIPE_REG_EXMEM.nop = 0;
@@ -359,16 +351,15 @@ void pipe_stage_decode()
         return;
 
     uint32_t opcode = instruction >> 26;
-    if (opcode != 2) {
+    
+    // LW
+    if (PIPE_REG_IDEX.opcode == 35) {
         uint32_t rt = (instruction >> 16) & 0x1F;
         uint32_t rs = (instruction >> 21) & 0x1F;
-        // LW
-        if (PIPE_REG_IDEX.opcode == 35) {
-            // Stall
-            if (PIPE_REG_IDEX.rt == rs || PIPE_REG_IDEX.rt == rt) {
-                PIPE_REG_IFDE.nofetch = 1;
-                PIPE_REG_IDEX.nop = 1;
-            }
+        // Stall
+        if (PIPE_REG_IDEX.rt == rs || PIPE_REG_IDEX.rt == rt) {
+            PIPE_REG_IFDE.nofetch = 1;
+            PIPE_REG_IDEX.nop = 1;
         }
     }
     // Pass on PCval and opcode
