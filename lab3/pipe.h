@@ -18,9 +18,9 @@ typedef struct CPU_State_Struct {
 
 typedef struct Pipe_Reg_IFDE_Struct {
     uint32_t instruction;
-    uint32_t PCval;
-    uint32_t nop;
-    uint32_t nofetch;
+    uint32_t PCval; // PCval to update
+    uint32_t nop;   
+    uint32_t nofetch;   // Nop for the fetch stage
 } Pipe_Reg_IFDE;
 
 typedef struct Pipe_Reg_IDEX_Struct {
@@ -31,7 +31,6 @@ typedef struct Pipe_Reg_IDEX_Struct {
     int32_t reg_val1; // Read reg data 1 (value of rs)
     int32_t reg_val2; // Read reg data 2 (valud of rt)
     uint32_t dest;  // Destination register
-    uint32_t addr;  // For use with j-type
     int32_t imm;   // For use in ALU with i-type
     uint32_t PCval; // Propagate new PC value
     uint32_t done;  // No more instructions left
@@ -44,7 +43,6 @@ typedef struct Pipe_Reg_EXMEM_Struct {
     uint32_t dest; // Destination register (USED IN FWDING logic)
     int32_t mem_write_val;  // Value to write to memory
     int32_t reg_write;  // Whether or not register will be written
-    uint32_t PCval; // Propagate new PC value with any changes from j-type or i-type instructions
     uint32_t done;  // No more instructions left
     uint32_t rt;    // The rt register used (where mem_write_val comes from) (USED IN MEM-MEM FWDING)
     uint32_t nop;
@@ -56,9 +54,9 @@ typedef struct Pipe_Reg_MEMWB_Struct {
     uint32_t reg_write;  // Controls whether data is written to dest register
     uint32_t done;  // No more instructions left
     uint32_t nop;
-    // The register written to during the current cycle [because .data gets overwritten in the mem cycle due to sequential operation] (USED IN FWDING)
+    // The register written to during the current cycle [because .data gets overwritten in the mem cycle] (USED IN FWDING)
     uint32_t reg_wrote;
-    // The value written during the current cycle [because .data gets overwritten in the mem cycle due to sequential operation] (USED IN FWDING)
+    // The value written during the current cycle [because .data gets overwritten in the mem cycle] (USED IN FWDING)
     int32_t wrote_val;
 } Pipe_Reg_MEMWB;
 
