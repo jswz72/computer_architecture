@@ -254,6 +254,7 @@ void pipe_stage_execute()
     // Forwarding
     int exhazard1 = 0;
     int exhazard2 = 0;
+    // MEM-EX forwarding
     if (PIPE_REG_EXMEM.reg_write && PIPE_REG_EXMEM.dest) {
         if (PIPE_REG_EXMEM.dest == PIPE_REG_IDEX.rs) {
             PIPE_REG_IDEX.reg_val1 = PIPE_REG_EXMEM.ALUresult;
@@ -264,6 +265,7 @@ void pipe_stage_execute()
             exhazard2 = 1;
         }
     }
+    // WB-EX forwarding
     if (PIPE_REG_MEMWB.reg_wrote) {
         // Don't fwd if exhazard already fwded
         if (PIPE_REG_MEMWB.reg_wrote == PIPE_REG_IDEX.rs && !exhazard1) {
@@ -352,14 +354,17 @@ void pipe_stage_decode()
 
     uint32_t opcode = instruction >> 26;
     
-    // LW
-    if (PIPE_REG_IDEX.opcode == 35) {
+    // Check for load-use hazard for all instructions that aren't jump
+    if (opcode != 2) {
         uint32_t rt = (instruction >> 16) & 0x1F;
         uint32_t rs = (instruction >> 21) & 0x1F;
-        // Stall
-        if (PIPE_REG_IDEX.rt == rs || PIPE_REG_IDEX.rt == rt) {
-            PIPE_REG_IFDE.nofetch = 1;
-            PIPE_REG_IDEX.nop = 1;
+        // LW instruction further in pipeline
+        if (PIPE_REG_IDEX.opcode == 35) {
+            // Stall
+            if (PIPE_REG_IDEX.rt == rs || PIPE_REG_IDEX.rt == rt) {
+                PIPE_REG_IFDE.nofetch = 1;
+                PIPE_REG_IDEX.nop = 1;
+            }
         }
     }
     // Pass on PCval and opcode
@@ -369,6 +374,7 @@ void pipe_stage_decode()
 	if (opcode == 0)
 		decode_r(instruction);
 	else if (opcode == 2) {
+        // Insert 1 bubble for jump
 		decode_j(instruction);
         PIPE_REG_IFDE.nofetch = 1;
         PIPE_REG_IFDE.nop = 1;
