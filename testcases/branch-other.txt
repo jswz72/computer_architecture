@@ -1,0 +1,8 @@
+li $t1, 69
+li $t2, 68
+bne $t1, $t2, f
+beq $t1, $t2, exit
+addi $t1, $t1, 2
+f:
+addi $t1, $t1, 1
+exit:

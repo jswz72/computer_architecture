@@ -1,0 +1,5 @@
+li $t1, 69
+j f
+addi $t1, $t1, 2
+f:
+addi $t1, $t1, 1
