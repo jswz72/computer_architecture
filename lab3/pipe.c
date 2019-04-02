@@ -29,11 +29,11 @@ void pipe_init()
 
 void pipe_cycle()
 {
-	pipe_stage_wb();
-	pipe_stage_mem();
-	pipe_stage_execute();
-	pipe_stage_decode();
-	pipe_stage_fetch();
+    pipe_stage_wb();
+    pipe_stage_mem();
+    pipe_stage_execute();
+    pipe_stage_decode();
+    pipe_stage_fetch();
 }
 
 
@@ -48,7 +48,8 @@ void pipe_stage_wb()
         PIPE_REG_MEMWB.wrote_val = PIPE_REG_MEMWB.data;
     }
     if (PIPE_REG_MEMWB.done)
-        RUN_BIT = 0; }
+        RUN_BIT = 0; 
+}
 
 void pipe_stage_mem()
 {
@@ -68,7 +69,7 @@ void pipe_stage_mem()
             PIPE_REG_MEMWB.data = mem_read_32(PIPE_REG_EXMEM.ALUresult);
             PIPE_REG_MEMWB.dest = PIPE_REG_EXMEM.dest;
             break;
-        // SW
+            // SW
         case 43:
             mem_write_32(PIPE_REG_EXMEM.ALUresult, PIPE_REG_EXMEM.mem_write_val);
             break;
@@ -103,7 +104,7 @@ void subu()
 
 void slt()
 {
-	PIPE_REG_EXMEM.ALUresult = 
+    PIPE_REG_EXMEM.ALUresult = 
         PIPE_REG_IDEX.reg_val1 < PIPE_REG_IDEX.reg_val2;
 }
 
@@ -147,19 +148,19 @@ void branch() {
 
 void beq()
 {
-	if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2)
+    if (PIPE_REG_IDEX.reg_val1 == PIPE_REG_IDEX.reg_val2)
         branch();
 }
 
 void bne()
 {
-	if (PIPE_REG_IDEX.reg_val1 != PIPE_REG_IDEX.reg_val2)
+    if (PIPE_REG_IDEX.reg_val1 != PIPE_REG_IDEX.reg_val2)
         branch();
 }
 
 void bgtz()
 {
-	if (PIPE_REG_IDEX.reg_val1 > 0)
+    if (PIPE_REG_IDEX.reg_val1 > 0)
         branch();
 }
 
@@ -204,41 +205,38 @@ void sw()
 
 void execute_i()
 {
-	switch(PIPE_REG_IDEX.opcode) {
-		case 4:
-			beq();
-			break;
-		case 5:
-			bne();
-			break;
-		case 7:
-			bgtz();
-			break;
-		case 8:
-			addi();
-			break;
-		case 9:
-			addiu();
-			break;
-		case 10:
-			slti();
-			break;
-		case 13:
-			ori();
-			break;
-		case 15:
-			lui();
-			break;
-		case 35:
-			lw();
-			break;
-		case 43:
-			sw();
-			break;
-	}
-    // Pass pcval through if doesn't need to be modified
-	if (PIPE_REG_IDEX.opcode > 7)
-        PIPE_REG_EXMEM.PCval = PIPE_REG_IDEX.PCval;
+    switch(PIPE_REG_IDEX.opcode) {
+        case 4:
+            beq();
+            break;
+        case 5:
+            bne();
+            break;
+        case 7:
+            bgtz();
+            break;
+        case 8:
+            addi();
+            break;
+        case 9:
+            addiu();
+            break;
+        case 10:
+            slti();
+            break;
+        case 13:
+            ori();
+            break;
+        case 15:
+            lui();
+            break;
+        case 35:
+            lw();
+            break;
+        case 43:
+            sw();
+            break;
+    }
 }
 
 
@@ -250,7 +248,7 @@ void pipe_stage_execute()
     PIPE_REG_EXMEM.done = PIPE_REG_IDEX.done;
     if (PIPE_REG_IDEX.done)
         return;
-    
+
     // Forwarding
     int exhazard1 = 0;
     int exhazard2 = 0;
@@ -278,10 +276,8 @@ void pipe_stage_execute()
 
 
     uint32_t opcode = PIPE_REG_IDEX.opcode;
-    if (opcode == 0) {
+    if (opcode == 0)
         execute_r();
-        PIPE_REG_EXMEM.PCval = PIPE_REG_IDEX.PCval;
-    }
     else if (opcode > 3)
         execute_i();
     PIPE_REG_EXMEM.opcode = opcode;
@@ -295,23 +291,23 @@ void pipe_stage_execute()
 void decode_r(uint32_t instruction)
 {
     // Use masks to get parts of instruction, shift for next part
-	PIPE_REG_IDEX.ALUfunc = instruction & 0x3F;
-	instruction >>= 11;
-	PIPE_REG_IDEX.dest = instruction & 0x1F;
-	instruction >>= 5;
+    PIPE_REG_IDEX.ALUfunc = instruction & 0x3F;
+    instruction >>= 11;
+    PIPE_REG_IDEX.dest = instruction & 0x1F;
+    instruction >>= 5;
     // rt
     PIPE_REG_IDEX.rt = instruction & 0x1F;
-	PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
-	instruction >>= 5;
+    PIPE_REG_IDEX.reg_val2 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
+    instruction >>= 5;
     // rs
     PIPE_REG_IDEX.rs = instruction & 0x1F;
-	PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
+    PIPE_REG_IDEX.reg_val1 = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
 }
 
 void decode_j(uint32_t instruction)
 {
     // Get 26 bits for instruction
-	uint32_t addr = instruction & 0X3FFFFFF;
+    uint32_t addr = instruction & 0X3FFFFFF;
     // Final instruction shifted by 2, with 4 high bites from next pc
     addr <<= 2;
     CURRENT_STATE.PC = (PIPE_REG_IFDE.PCval & 0XF0000000) | addr;
@@ -330,16 +326,16 @@ int32_t sign_extend(int16_t a)
 void decode_i(uint32_t instruction)
 {
     PIPE_REG_IDEX.imm = sign_extend(instruction & 0xFFFF);
-	instruction >>= 16;
-	PIPE_REG_IDEX.rt = instruction & 0x1F;
-	PIPE_REG_IDEX.dest = PIPE_REG_IDEX.rt;
+    instruction >>= 16;
+    PIPE_REG_IDEX.rt = instruction & 0x1F;
+    PIPE_REG_IDEX.dest = PIPE_REG_IDEX.rt;
     int32_t rt_val = CURRENT_STATE.REGS[PIPE_REG_IDEX.rt];
     PIPE_REG_IDEX.reg_val2 = rt_val;
-	instruction >>= 5;
+    instruction >>= 5;
     PIPE_REG_IDEX.rs = instruction & 0x1F;
     int32_t rs_val = CURRENT_STATE.REGS[PIPE_REG_IDEX.rs];
     PIPE_REG_IDEX.reg_val1 = rs_val;
-	instruction >>= 5;
+    instruction >>= 5;
 }
 
 void pipe_stage_decode()
@@ -353,7 +349,7 @@ void pipe_stage_decode()
         return;
 
     uint32_t opcode = instruction >> 26;
-    
+
     // Check for load-use hazard for all instructions that aren't jump
     if (opcode != 2) {
         uint32_t rt = (instruction >> 16) & 0x1F;
@@ -371,16 +367,16 @@ void pipe_stage_decode()
     PIPE_REG_IDEX.opcode = opcode;
     PIPE_REG_IDEX.PCval = PIPE_REG_IFDE.PCval;
 
-	if (opcode == 0)
-		decode_r(instruction);
-	else if (opcode == 2) {
+    if (opcode == 0)
+        decode_r(instruction);
+    else if (opcode == 2) {
         // Insert 1 bubble for jump
-		decode_j(instruction);
+        decode_j(instruction);
         PIPE_REG_IFDE.nofetch = 1;
         PIPE_REG_IFDE.nop = 1;
     }
-	else if (opcode > 3)
-		decode_i(instruction);
+    else if (opcode > 3)
+        decode_i(instruction);
     PIPE_REG_IDEX.nop = 0;
 }
 
