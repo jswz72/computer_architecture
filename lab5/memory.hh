@@ -54,8 +54,8 @@ class MainMem{
   Block blocks[BLOCKS_IN_MEMORY];
   MainMem(){ }  //constructor
   ~MainMem(){ }  //destructor
-  //int getData(int);
-  //int putData(int, int);
+  Block getData(int);
+  Block putData(int, int);
 };//class MainMem
 //-------------------------------------
 
@@ -73,6 +73,10 @@ class Cache {
   //=====================================
   int getData(int address);
   void putData( int address, int value );
+
+private:
+  int get_data_direct(int);
+  void put_data_direct(int, int);
 };//class Cache
 //-------------------------------------
 
