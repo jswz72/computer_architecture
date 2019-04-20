@@ -1,6 +1,7 @@
 #ifndef MEMORY_HH_
 #define MEMORY_HH_
 #include <stdio.h>
+#include <unordered_map>
 
 /*
   This file contains basic cache and block structures.
@@ -58,15 +59,53 @@ class MainMem{
   Block putData(int, int);
 };//class MainMem
 //-------------------------------------
+//
+
+struct LRUNode {
+    LRUNode() {}
+    LRUNode(Block block): block(block) {}
+    Block block;
+    LRUNode *next;
+    LRUNode *prev;
+    void remove();
+};
+
+
 
 
 //=================
 //==  Cache
 //=================
 class Cache {
- public:
+
+    class LRUQueue {
+    public:
+        LRUQueue() {
+            capacity = BLOCKS_IN_CACHE;
+            // Head points to before head
+            head = new LRUNode();
+            // Tail points to after tail (new nodes inserted at tail)
+            tail = new LRUNode();
+            head->next = tail;
+            tail->prev = head;
+        }
+
+        void put(int address, int value);
+        void put(int address);
+
+    private:
+        void add_node(LRUNode);
+        void evict();
+        int capacity; 
+        LRUNode *head;
+        LRUNode *tail;
+        std::unordered_map<int, LRUNode*> node_map;
+    };
+
+public:
   Block cblocks[BLOCKS_IN_CACHE];
   MainMem MainMemory;
+  Cache::LRUQueue lru_q;
 
   Cache(){ }  //constructor
   ~Cache(){ }  //destructor
@@ -77,7 +116,10 @@ class Cache {
 private:
   int get_data_direct(int);
   void put_data_direct(int, int);
+  int get_data_fully(int);
 };//class Cache
+
+
 //-------------------------------------
 
 
