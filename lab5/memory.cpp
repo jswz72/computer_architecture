@@ -37,34 +37,37 @@ void hit() {
     clockX += 2;
 }
 
-void Cache::LRUQueue::put(int address, int value) {
+void LRUQueue::put(int address, int value) {
     // TODO
     int tag = address >>= 5;
-    // Remove current node from point in queue
     Block block;
     if (node_map.find(tag) != node_map.end()) {
+        // Remove current node from point in queue if is in cache
         hit();
-        Block block = node_map[tag]->block;
-        Block x = Cache::MainMemory.putData(address, value);
+        block = node_map[tag]->block;
+        // Write through, don't care about return
+        main_mem->putData(address, value);
         node_map[tag]->remove();
     }
-    // Not in queue
+    // Not in queue/cache
     else {
         miss();
-        block = Cache::MainMemory.putData(address, value);
-        // Queue full
+        // Update and get it from main_memory
+        block = main_mem->putData(address, value);
+        // Queue full - make space
         if (node_map.size() == capacity)
             evict();
     }
     // Add new node as most current
-    LRUNode cur = LRUNode(block);
+    LRUNode *cur = new LRUNode(block);
     add_node(cur);
     node_map[tag] = cur;
 }
 
+// Get rid of LRU node from queue, remove entry from map
 void LRUQueue::evict() {
-    LRUNode to_remove = head->next;
-    to_remove.remove();
+    LRUNode *to_remove = head->next;
+    to_remove->remove();
     node_map.erase(node_map.find(tag));
 }
 
@@ -80,29 +83,33 @@ int LRUQueue::get(int address) {
     } else {
         // Not found in cache
         miss();
-        block = Cache::MainMemory.getData(address);
+        block = main_mem->getData(address);
         // Queue full
         if (node_map.size() == capacity)
             evict();
     }
-    LRUnode cur = LRUNode(block);
+    LRUNode *cur = new LRUNode(block);
+    add_node(cur);
     node_map[tag] = cur;
     return block->data[block_offset];
 }
 
-void LRUQueue::add_node(LRUNode node) {
-    LRUNode last = tail->prev;
+void LRUQueue::add_node(LRUNode *node) {
+    LRUNode *last = tail->prev;
     last->next = node;
     node->prev = last;
     node->next = tail;
     tail.prev = node;
 }
 
+// Remove self from LL queue
 LRUNode::remove() {
     LRUNode *prev = prev;
     LRUNode *next = next;
     prev->next = next;
     next->prev = prev;
+    next = 0;
+    prev = 0;
 }
 
 Block MainMem::getData(int address) {
@@ -162,7 +169,7 @@ void Cache::put_data_direct(int address, int value) {
 
 // Get data using fully associative cache
 int Cache::get_data_fully(int address) {
-    LRUQueue f;
+    lru_queue.get(address);
 }
 
 int Cache::getData(int address)

@@ -1,7 +1,11 @@
 #ifndef MEMORY_HH_
 #define MEMORY_HH_
 #include <stdio.h>
+#include <iostream>
 #include <unordered_map>
+
+using std::cout;
+using std::endl;
 
 /*
   This file contains basic cache and block structures.
@@ -61,6 +65,7 @@ class MainMem{
 //-------------------------------------
 //
 
+// A block that has access to the next and prev blocks in the LRU queue
 struct LRUNode {
     LRUNode() {}
     LRUNode(Block block): block(block) {}
@@ -70,45 +75,46 @@ struct LRUNode {
     void remove();
 };
 
+// A queue ordering the least rcently used "nodes" (blocks) in the cache
+class LRUQueue {
+public:
+    // Give access to main memory to get stuff thats not in the Q
+    LRUQueue(MainMem *mem) {
+        main_mem = mem;
+        capacity = BLOCKS_IN_CACHE;
+        // Head points to before head
+        head = new LRUNode();
+        // Tail points to after tail (new nodes inserted at tail)
+        tail = new LRUNode();
+        head->next = tail;
+        tail->prev = head;
+    }
 
+    void put(int address, int value);
+    void get(int address);
 
+private:
+    void add_node(LRUNode*);
+    void evict();
+    int capacity; 
+    LRUNode *head;
+    LRUNode *tail;
+    MainMem *main_mem;
+    // Map of tags to LRUNodes currently in the queue
+    std::unordered_map<int, LRUNode*> node_map;
+};
 
 //=================
 //==  Cache
 //=================
 class Cache {
-
-    class LRUQueue {
-    public:
-        LRUQueue() {
-            capacity = BLOCKS_IN_CACHE;
-            // Head points to before head
-            head = new LRUNode();
-            // Tail points to after tail (new nodes inserted at tail)
-            tail = new LRUNode();
-            head->next = tail;
-            tail->prev = head;
-        }
-
-        void put(int address, int value);
-        void put(int address);
-
-    private:
-        void add_node(LRUNode);
-        void evict();
-        int capacity; 
-        LRUNode *head;
-        LRUNode *tail;
-        std::unordered_map<int, LRUNode*> node_map;
-    };
-
 public:
   Block cblocks[BLOCKS_IN_CACHE];
   MainMem MainMemory;
-  Cache::LRUQueue lru_q;
+  LRUQueue lru_q;
 
-  Cache(){ }  //constructor
-  ~Cache(){ }  //destructor
+  Cache() : lru_q(LRUQueue(&MainMemory)) {};
+  ~Cache(){ }
   //=====================================
   int getData(int address);
   void putData( int address, int value );
@@ -143,12 +149,12 @@ public:
   
   void showCacheAddress () // show the cache contents
   {
-    for(int j=0; j<BLOCKS_IN_CACHE; j++) {
-      printf("Address in block %d: ", j);
-      for(int k=0; k<WORDS_PER_BLOCK; k++) {
-	;// print out addresses of each block
+    for(int j = 0; j < BLOCKS_IN_CACHE; j++) {
+      cout << "Address in block " << j;
+      for(int k = 0; k < WORDS_PER_BLOCK; k++) {
+          cout << myCache.cblocks[j].data[k] << " ";
       }
-      printf("\n");
+      cout << endl;
     }
   }
 };
