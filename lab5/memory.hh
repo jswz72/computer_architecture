@@ -113,13 +113,13 @@ public:
   void showCacheAddress () // show the cache contents
   {
       for(int j = 0; j < BLOCKS_IN_CACHE; j++) { 
+          Block block = myCache.cblocks[j];
           cout << "Address in block " << j; 
           for(int k = 0; k < WORDS_PER_BLOCK; k++) { 
-              Block block = myCache.cblocks[j];
               int addr = (((block.tag << 3) + j) << 2 ) + k;
-              cout << " " << addr << " " << block.last_used;
+              cout << " " << addr;
           }
-          cout << endl;
+          cout << " last used: " << block.last_used << endl;
       }
   }
 };
