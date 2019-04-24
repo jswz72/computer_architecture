@@ -2,8 +2,6 @@
 #define MEMORY_HH_
 #include <stdio.h>
 #include <iostream>
-#include <vector>
-#include <unordered_map>
 
 using std::cout;
 using std::endl;
@@ -16,12 +14,10 @@ using std::endl;
 
 extern unsigned int clockX;
 extern unsigned int numMisses;
+extern unsigned int counter;
 extern int cache_org;
 
 enum cache_org {DIRECT = 0, FULLY, TWOWAY}; // FULLY=1, TWOWAY=2
-
-// TODO
-extern int lru;
 
 void printCacheOrg (int org); // print cache org
 void resetClock(void); // set timer to zero
@@ -69,46 +65,6 @@ class MainMem{
 //-------------------------------------
 //
 
-// A block that has access to the next and prev blocks in the LRU queue
-struct LRUNode {
-    LRUNode(): next(0), prev(0) {}
-    LRUNode(Block block): block(block), next(0), prev(0) {}
-    Block block;
-    LRUNode *next;
-    LRUNode *prev;
-    void remove();
-};
-
-// A queue ordering the least rcently used "nodes" (blocks) in the cache
-class LRUQueue {
-public:
-    // Give access to main memory to get stuff thats not in the Q
-    LRUQueue(MainMem *mem) {
-        main_mem = mem;
-        capacity = BLOCKS_IN_CACHE;
-        // Head points to before head
-        head = new LRUNode();
-        // Tail points to after tail (new nodes inserted at tail)
-        tail = new LRUNode();
-        head->next = tail;
-        tail->prev = head;
-    }
-
-    void put(int address, int value);
-    int get(int address);
-    std::vector<int> contents();
-    void print_contents();
-
-private:
-    void add_node(LRUNode*);
-    void evict();
-    unsigned int capacity; 
-    LRUNode *head;
-    LRUNode *tail;
-    MainMem *main_mem;
-    // Map of tags to LRUNodes currently in the queue
-    std::unordered_map<int, LRUNode*> node_map;
-};
 
 //=================
 //==  Cache
@@ -117,9 +73,8 @@ class Cache {
 public:
   Block cblocks[BLOCKS_IN_CACHE];
   MainMem MainMemory;
-  LRUQueue lru_q;
 
-  Cache() : lru_q(LRUQueue(&MainMemory)) {};
+  Cache(){}
   ~Cache(){ }
   //=====================================
   int getData(int address);
@@ -129,6 +84,8 @@ private:
   int get_data_direct(int);
   void put_data_direct(int, int);
   int get_data_fully(int);
+  void put_data_fully(int, int);
+  void add_block(Block &block);
 };//class Cache
 
 
@@ -155,26 +112,14 @@ public:
   
   void showCacheAddress () // show the cache contents
   {
-      if (cache_org == DIRECT) { 
-          for(int j = 0; j < BLOCKS_IN_CACHE; j++) { 
-              cout << "Address in block " << j; 
-              for(int k = 0; k < WORDS_PER_BLOCK; k++) { 
-                  int addr = (((myCache.cblocks[j].tag << 3) + j) << 2 ) + k;
-                  cout << " " << addr;
-              }
-              cout << endl;
+      for(int j = 0; j < BLOCKS_IN_CACHE; j++) { 
+          cout << "Address in block " << j; 
+          for(int k = 0; k < WORDS_PER_BLOCK; k++) { 
+              Block block = myCache.cblocks[j];
+              int addr = (((block.tag << 3) + j) << 2 ) + k;
+              cout << " " << addr << " " << block.last_used;
           }
-      }
-      else if (cache_org == FULLY) {
-          std::vector<int> tags = myCache.lru_q.contents();
-          for (int j = 0; j < BLOCKS_IN_CACHE; j++) {
-              cout << "Address in block " << j;
-              for (int k = 0; k < WORDS_PER_BLOCK; k++) {
-                  int addr = (((tags[j] << 3) + j) << 2) + k;
-                  cout << " " << addr;
-              }
-              cout << endl;
-          }
+          cout << endl;
       }
   }
 };
