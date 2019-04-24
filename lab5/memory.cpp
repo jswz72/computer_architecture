@@ -117,7 +117,10 @@ Block MainMem::getData(int address) {
     mem_access();
     int addr_data = address >> 2; // dont care about blockoffset
     int mem_idx = addr_data & 0x1FF; // 511
-    //cout << "Get addr " << address << " idx: " << mem_idx << endl;
+    int tag = addr_data >> 3;
+    blocks[mem_idx].valid = true;
+    blocks[mem_idx].tag = tag;
+
     return blocks[mem_idx];
 }
 
@@ -130,7 +133,6 @@ void MainMem::putData(int address, int value) {
     int tag = addr_data >> 3;
     blocks[mem_idx].valid = true;
     blocks[mem_idx].tag = tag;
-    //cout << "Put addr " << address << " idx: " << mem_idx << endl;
     blocks[mem_idx].data[block_offset] = value;
 }
 
@@ -143,14 +145,10 @@ int Cache::get_data_direct(int address) {
     int cache_idx = addr_data & 0x7;
     addr_data >>= 3;
     int tag = addr_data;
-    cout << "Get addr " << address << " idx " << cache_idx << endl;
 
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
         numMisses++;
         Block block = MainMemory.getData(address);
-        // TODO doesn't work when take this out
-        //block.valid = true;
-        //block.tag = tag;
         cblocks[cache_idx] = block;
         return block.data[block_offset];
     } else {
@@ -166,7 +164,6 @@ void Cache::put_data_direct(int address, int value) {
     int cache_idx = addr_data & 0x7;
     addr_data >>= 3;
     int tag = addr_data;
-    cout << "Put addr " << address << " idx " << cache_idx << endl;
 
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
         numMisses++;
