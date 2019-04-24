@@ -60,7 +60,8 @@ void LRUQueue::print_contents() {
 
 void LRUQueue::put(int address, int value) {
     cache_access();
-    int tag = address >>= 5;
+    int tag = address >> 2;
+    cout << "Put Address: " << address << " Tag: " << tag << endl;
     Block block;
     if (node_map.find(tag) != node_map.end()) {
         // Remove current node from point in queue if is in cache
@@ -96,7 +97,8 @@ int LRUQueue::get(int address) {
     cache_access();
     // TODO
     int block_offset = address & 0x3;
-    int tag = address >>= 5;
+    int tag = address >> 2;
+    cout << "Get Address: " << address << " Tag: " << tag << endl;
     Block block;
     if (node_map.find(tag) != node_map.end()) {
         block = node_map[tag]->block;
