@@ -68,7 +68,7 @@ void LRUQueue::put(int address, int value) {
 void LRUQueue::evict() {
     LRUNode *to_remove = head->next;
     to_remove->remove();
-    node_map.erase(node_map.find(tag));
+    node_map.erase(node_map.find(to_remove->block.tag));
 }
 
 int LRUQueue::get(int address) {
@@ -91,7 +91,7 @@ int LRUQueue::get(int address) {
     LRUNode *cur = new LRUNode(block);
     add_node(cur);
     node_map[tag] = cur;
-    return block->data[block_offset];
+    return block.data[block_offset];
 }
 
 void LRUQueue::add_node(LRUNode *node) {
@@ -99,11 +99,11 @@ void LRUQueue::add_node(LRUNode *node) {
     last->next = node;
     node->prev = last;
     node->next = tail;
-    tail.prev = node;
+    tail->prev = node;
 }
 
 // Remove self from LL queue
-LRUNode::remove() {
+void LRUNode::remove() {
     LRUNode *prev = prev;
     LRUNode *next = next;
     prev->next = next;
@@ -112,12 +112,14 @@ LRUNode::remove() {
     prev = 0;
 }
 
+// TODO write tag?
 Block MainMem::getData(int address) {
     int addr_data = address >>= 2; // blockoffset
     int mem_idx = addr_data & 0x1FF; // 511
     return blocks[mem_idx];
 }
 
+// TODO write tag?
 Block MainMem::putData(int address, int value) {
     int addr_data = address; // blockoffset
     int block_offset = addr_data >>= 2;
@@ -157,19 +159,20 @@ void Cache::put_data_direct(int address, int value) {
 
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
         miss();
-        Block block = MainMem.putData(address, value);
+        Block block = MainMemory.putData(address, value);
         block.tag = tag;
         block.valid = 1;
         cblocks[cache_idx] = block;
     } else {
         hit();
-        Block block = MainMem.putData(address, value);
+        Block block = MainMemory.putData(address, value);
     }
 }
 
 // Get data using fully associative cache
 int Cache::get_data_fully(int address) {
-    lru_queue.get(address);
+    lru_q.get(address);
+	return 0;	// TODO tmp to supress warnings
 }
 
 int Cache::getData(int address)

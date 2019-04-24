@@ -68,7 +68,7 @@ class MainMem{
 // A block that has access to the next and prev blocks in the LRU queue
 struct LRUNode {
     LRUNode() {}
-    LRUNode(Block block): block(block) {}
+    LRUNode(Block block): block(block), prev(0), next(0) {}
     Block block;
     LRUNode *next;
     LRUNode *prev;
@@ -91,12 +91,12 @@ public:
     }
 
     void put(int address, int value);
-    void get(int address);
+    int get(int address);
 
 private:
     void add_node(LRUNode*);
     void evict();
-    int capacity; 
+    unsigned int capacity; 
     LRUNode *head;
     LRUNode *tail;
     MainMem *main_mem;
