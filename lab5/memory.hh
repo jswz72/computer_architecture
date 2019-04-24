@@ -2,6 +2,7 @@
 #define MEMORY_HH_
 #include <stdio.h>
 #include <iostream>
+#include <vector>
 #include <unordered_map>
 
 using std::cout;
@@ -18,6 +19,9 @@ extern unsigned int numMisses;
 extern int cache_org;
 
 enum cache_org {DIRECT = 0, FULLY, TWOWAY}; // FULLY=1, TWOWAY=2
+
+// TODO
+extern int lru;
 
 void printCacheOrg (int org); // print cache org
 void resetClock(void); // set timer to zero
@@ -60,15 +64,15 @@ class MainMem{
   MainMem(){ }  //constructor
   ~MainMem(){ }  //destructor
   Block getData(int);
-  Block putData(int, int);
+  void putData(int, int);
 };//class MainMem
 //-------------------------------------
 //
 
 // A block that has access to the next and prev blocks in the LRU queue
 struct LRUNode {
-    LRUNode() {}
-    LRUNode(Block block): block(block), prev(0), next(0) {}
+    LRUNode(): next(0), prev(0) {}
+    LRUNode(Block block): block(block), next(0), prev(0) {}
     Block block;
     LRUNode *next;
     LRUNode *prev;
@@ -92,6 +96,8 @@ public:
 
     void put(int address, int value);
     int get(int address);
+    std::vector<int> contents();
+    void print_contents();
 
 private:
     void add_node(LRUNode*);
@@ -149,13 +155,27 @@ public:
   
   void showCacheAddress () // show the cache contents
   {
-    for(int j = 0; j < BLOCKS_IN_CACHE; j++) {
-      cout << "Address in block " << j;
-      for(int k = 0; k < WORDS_PER_BLOCK; k++) {
-          cout << myCache.cblocks[j].data[k] << " ";
+      if (cache_org == DIRECT) { 
+          for(int j = 0; j < BLOCKS_IN_CACHE; j++) { 
+              cout << "Address in block " << j; 
+              for(int k = 0; k < WORDS_PER_BLOCK; k++) { 
+                  int addr = (((myCache.cblocks[j].tag << 3) + j) << 2 ) + k;
+                  cout << " " << addr;
+              }
+              cout << endl;
+          }
       }
-      cout << endl;
-    }
+      else if (cache_org == FULLY) {
+          std::vector<int> tags = myCache.lru_q.contents();
+          for (int j = 0; j < BLOCKS_IN_CACHE; j++) {
+              cout << "Address in block " << j;
+              for (int k = 0; k < WORDS_PER_BLOCK; k++) {
+                  int addr = (((tags[j] << 3) + j) << 2) + k;
+                  cout << " " << addr;
+              }
+              cout << endl;
+          }
+      }
   }
 };
 

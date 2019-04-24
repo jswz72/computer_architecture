@@ -1,9 +1,11 @@
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 #include "memory.hh"
 
 using std::cout;
 using std::endl;
+
 
 unsigned int clockX;
 unsigned int numMisses;
@@ -28,22 +30,40 @@ void printCacheOrg(int org)
     printf ("ERROR: WRONG CACHE ORG\n");
 }
 
-void miss() {
+void mem_access() {
     clockX += 100;
-    numMisses++;
 }
 
-void hit() {
+void cache_access() {
     clockX += 2;
 }
 
+
+std::vector<int> LRUQueue::contents() {
+    std::vector<int> contents;
+    LRUNode *runner = tail->prev;
+    while (runner != nullptr) {
+        contents.push_back(runner->block.tag);
+        runner = runner->prev;
+    }
+    return contents;
+}
+
+void LRUQueue::print_contents() {
+    std::vector<int> c= contents();
+    cout << "Contents:";
+    for (int i = 0; i < c.size(); i++) {
+        cout << " " << c[i];
+    }
+    cout << endl;
+}
+
 void LRUQueue::put(int address, int value) {
-    // TODO
+    cache_access();
     int tag = address >>= 5;
     Block block;
     if (node_map.find(tag) != node_map.end()) {
         // Remove current node from point in queue if is in cache
-        hit();
         block = node_map[tag]->block;
         // Write through, don't care about return
         main_mem->putData(address, value);
@@ -51,9 +71,10 @@ void LRUQueue::put(int address, int value) {
     }
     // Not in queue/cache
     else {
-        miss();
         // Update and get it from main_memory
-        block = main_mem->putData(address, value);
+        main_mem->putData(address, value);
+        numMisses++;
+        block = main_mem->getData(address);
         // Queue full - make space
         if (node_map.size() == capacity)
             evict();
@@ -72,17 +93,17 @@ void LRUQueue::evict() {
 }
 
 int LRUQueue::get(int address) {
+    cache_access();
     // TODO
     int block_offset = address & 0x3;
     int tag = address >>= 5;
     Block block;
     if (node_map.find(tag) != node_map.end()) {
-        hit();
         block = node_map[tag]->block;
         node_map[tag]->remove();
     } else {
         // Not found in cache
-        miss();
+        numMisses++;
         block = main_mem->getData(address);
         // Queue full
         if (node_map.size() == capacity)
@@ -104,32 +125,32 @@ void LRUQueue::add_node(LRUNode *node) {
 
 // Remove self from LL queue
 void LRUNode::remove() {
-    LRUNode *prev = prev;
-    LRUNode *next = next;
     prev->next = next;
     next->prev = prev;
-    next = 0;
-    prev = 0;
 }
 
 // TODO write tag?
 Block MainMem::getData(int address) {
-    int addr_data = address >>= 2; // blockoffset
+    mem_access();
+    int addr_data = address >>= 2; // dont care about blockoffset
     int mem_idx = addr_data & 0x1FF; // 511
     return blocks[mem_idx];
 }
 
 // TODO write tag?
-Block MainMem::putData(int address, int value) {
-    int addr_data = address; // blockoffset
+void MainMem::putData(int address, int value) {
+    mem_access();
+    int addr_data = address;
     int block_offset = addr_data >>= 2;
     int mem_idx = addr_data & 0x1FF; // 511
+    int tag = addr_data >>= 3;
+    blocks[mem_idx].tag = tag;
     blocks[mem_idx].data[block_offset] = value;
-    return blocks[mem_idx];
 }
 
 // Get data using direct mapped cache
 int Cache::get_data_direct(int address) {
+    cache_access();
     int addr_data = address;
     int block_offset = addr_data & 0x3;
     addr_data >>= 2;
@@ -138,41 +159,36 @@ int Cache::get_data_direct(int address) {
     int tag = addr_data;
 
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
-        miss();
+        numMisses++;
         Block block = MainMemory.getData(address);
         block.tag = tag;
         block.valid = 1;
         cblocks[cache_idx] = block;
         return block.data[block_offset];
     } else {
-        hit();
         return cblocks[cache_idx].data[block_offset];
     }
 }
 
+
 // Put data using direct mapped cache
 void Cache::put_data_direct(int address, int value) {
+    cache_access();
     int addr_data = address >>= 2; // don't care about block offset
     int cache_idx = addr_data & 0x7;
     addr_data >>= 3;
     int tag = addr_data;
 
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
-        miss();
-        Block block = MainMemory.putData(address, value);
+        numMisses++;
+        MainMemory.putData(address, value);
+        Block block = MainMemory.getData(address);
         block.tag = tag;
         block.valid = 1;
         cblocks[cache_idx] = block;
     } else {
-        hit();
-        Block block = MainMemory.putData(address, value);
+        MainMemory.putData(address, value);
     }
-}
-
-// Get data using fully associative cache
-int Cache::get_data_fully(int address) {
-    lru_q.get(address);
-	return 0;	// TODO tmp to supress warnings
 }
 
 int Cache::getData(int address)
@@ -181,7 +197,7 @@ int Cache::getData(int address)
     if (cache_org == DIRECT)
         data = get_data_direct(address);
     else if (FULLY)
-        data = get_data_fully(address);
+        data = lru_q.get(address);
     return data;
 }
 
@@ -189,4 +205,8 @@ void Cache::putData(int address, int value)
 {
     if (cache_org == DIRECT)
         put_data_direct(address, value);
+    else if (FULLY) {
+        lru_q.put(address, value);
+        //lru_q.print_contents();
+    }
 }
