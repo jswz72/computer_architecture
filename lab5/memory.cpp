@@ -39,80 +39,6 @@ void cache_access() {
     clockX += 2;
 }
 
-void Cache::put_data_fully(int address, int value) {
-    cache_access();
-    int tag = address >> 2;
-    //cout << "Put Address: " << address << " Tag: " << tag << endl;
-    Block block;
-    bool found = false;
-    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
-        if (cblocks[i].tag == tag) {
-            found = true;
-            block = cblocks[i];
-            break;
-        }
-    }
-    // Write-through
-    if (found) {
-        MainMemory.putData(address, value);
-    }
-    // Not in queue/cache
-    else {
-        // Update and get it from main_memory
-        numMisses++;
-        MainMemory.putData(address, value);
-        block = MainMemory.getData(address);
-    }
-    // Add new node as most current
-    block.last_used = counter;
-    add_block(block);
-}
-
-// Add block to empty space.
-// If no empty space, evict least recently used
-void Cache::add_block(Block &block) {
-    int least = 0;
-    int index = 0;
-    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
-        // End early if open block
-        if (!cblocks[i].valid) {
-            index = i;
-            break;
-        }
-        int diff = counter - cblocks[i].last_used > least;
-        if (diff > least) {
-            least = diff;
-            index = i;
-        }
-    }
-    cblocks[index] = block;
-}
-
-int Cache::get_data_fully(int address) {
-    cache_access();
-    // TODO
-    int block_offset = address & 0x3;
-    int tag = address >> 2;
-    //cout << "Get Address: " << address << " Tag: " << tag << endl;
-    Block block;
-    bool found = false;
-    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
-        if (cblocks[i].tag == tag) {
-            found = true;
-            block = cblocks[i];
-            break;
-        }
-    }
-    if (!found) {
-        // Not found in cache
-        numMisses++;
-        block = MainMemory.getData(address);
-    }
-    block.last_used = counter;
-    add_block(block);
-    return block.data[block_offset];
-}
-
 Block MainMem::getData(int address) {
     mem_access();
     int addr_data = address >> 2; // dont care about blockoffset
@@ -136,6 +62,81 @@ void MainMem::putData(int address, int value) {
     blocks[mem_idx].data[block_offset] = value;
 }
 
+void Cache::put_data_fully(int address, int value) {
+    cache_access();
+    int tag = address >> 2;
+    //cout << "Put Address: " << address << " Tag: " << tag << endl;
+    bool found = false;
+    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
+        if (cblocks[i].tag == tag) {
+            found = true;
+            cblocks[i].last_used = counter;
+            break;
+        }
+    }
+    // Write-through
+    if (found) {
+        MainMemory.putData(address, value);
+    }
+    // Not in queue/cache
+    else {
+        // Update and get it from main_memory
+        numMisses++;
+        MainMemory.putData(address, value);
+        Block block = MainMemory.getData(address);
+        block.last_used = counter;
+        add_block(block);
+    }
+    // Add new node as most current
+}
+
+// Add block to empty space.
+// If no empty space, evict least recently used
+void Cache::add_block(Block &block) {
+    int least = 0;
+    int index = 0;
+    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
+        // End early if open block
+        if (!cblocks[i].valid) {
+            index = i;
+            break;
+        }
+        int diff = counter - cblocks[i].last_used;
+        if (diff > least) {
+            least = diff;
+            index = i;
+        }
+    }
+    cblocks[index] = block;
+}
+
+int Cache::get_data_fully(int address) {
+    cache_access();
+    // TODO
+    int block_offset = address & 0x3;
+    int tag = address >> 2;
+    //cout << "Get Address: " << address << " Tag: " << tag << endl;
+    Block block;
+    bool found = false;
+    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
+        if (cblocks[i].tag == tag) {
+            found = true;
+            cblocks[i].last_used = counter;
+            block = cblocks[i];
+            break;
+        }
+    }
+    if (!found) {
+        // Not found in cache
+        numMisses++;
+        block = MainMemory.getData(address);
+        block.last_used = counter;
+        add_block(block);
+    }
+    return block.data[block_offset];
+}
+
+//
 // Get data using direct mapped cache
 int Cache::get_data_direct(int address) {
     cache_access();
@@ -180,9 +181,9 @@ int Cache::getData(int address)
     int data;
     if (cache_org == DIRECT)
         data = get_data_direct(address);
-    else if (FULLY)
+    else if (cache_org == FULLY)
         data = get_data_fully(address);
-    else if (TWOWAY)
+    else if (cache_org == TWOWAY)
         data = 0;
     counter++;
     return data;
@@ -192,7 +193,7 @@ void Cache::putData(int address, int value)
 {
     if (cache_org == DIRECT)
         put_data_direct(address, value);
-    else if (FULLY) {
+    else if (cache_org == FULLY) {
         put_data_fully(address, value);
     }
     counter++;
