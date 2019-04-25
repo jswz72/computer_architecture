@@ -85,7 +85,8 @@ private:
   void put_data_direct(int, int);
   int get_data_fully(int);
   void put_data_fully(int, int);
-  void add_block(Block &block);
+  void add_block(Block block);
+  void print_cache();
 };//class Cache
 
 
@@ -96,6 +97,9 @@ class Memory
 {
 private:
   Cache myCache;
+  void show_cache_direct();
+  void show_cache_fully();
+  void show_cache_twoway();
   
 public:
   
@@ -109,18 +113,15 @@ public:
   {
     myCache.putData(address, value);
   }
-  
+
   void showCacheAddress () // show the cache contents
   {
-      for(int j = 0; j < BLOCKS_IN_CACHE; j++) { 
-          Block block = myCache.cblocks[j];
-          cout << "Address in block " << j; 
-          for(int k = 0; k < WORDS_PER_BLOCK; k++) { 
-              int addr = (((block.tag << 3) + j) << 2 ) + k;
-              cout << " " << addr;
-          }
-          cout << " last used: " << block.last_used << endl;
-      }
+      if (cache_org == DIRECT)
+          show_cache_direct();
+      else if (cache_org == FULLY)
+          show_cache_fully();
+      else 
+          show_cache_twoway();
   }
 };
 
