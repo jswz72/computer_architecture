@@ -93,12 +93,9 @@ void MainMem::putData(int address, int value) {
 
 }
 
-
-
 // Add block to empty space.
 // If no empty space, evict least recently used
 void Cache::add_block(Block block) {
-    //cout << block.tag << endl;
     int least = 0;
     int index = 0;
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
@@ -126,10 +123,8 @@ void Cache::print_cache() {
 
 int Cache::get_data_fully(int address) {
     cache_access();
-    // TODO
     int block_offset = address & 0x3;
     int tag = address >> 2;
-    //cout << "Get Address: " << address << " Tag: " << tag << endl;
     Block block;
     bool found = false;
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
@@ -155,7 +150,6 @@ int Cache::get_data_fully(int address) {
 void Cache::put_data_fully(int address, int value) {
     cache_access();
     int tag = address >> 2;
-    //cout << "Put Address: " << address << " Tag: " << tag << endl;
     bool found = false;
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
         if (cblocks[i].tag == tag) {
@@ -237,6 +231,9 @@ int Cache::getData(int address)
     }
     else if (cache_org == TWOWAY)
         data = 0;
+    else
+        cout << "Bad cache org" << endl;
+        return 0;
     return data;
 }
 

@@ -40,6 +40,7 @@ class Block{
   Block()//constructor
   {
     valid = 0;
+    last_used = 0;
   }
   ~Block(){ }//destructor
   
