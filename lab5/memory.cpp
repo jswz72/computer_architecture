@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 #include "memory.hh"
 
 using std::cout;
@@ -7,7 +8,7 @@ using std::endl;
 
 unsigned int clockX;
 unsigned int numMisses;
-unsigned int counter;
+unsigned int counter = 0;
 
 int cache_org;
 
@@ -15,7 +16,6 @@ void resetClock()
 {
   clockX = 0;
   numMisses = 0;
-  counter = 0;
 }
 
 void printCacheOrg(int org)
@@ -67,6 +67,18 @@ void Memory::show_cache_fully() {
 }
 
 void Memory::show_cache_twoway() {
+    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
+        Block block = myCache.cblocks[i];
+        cout << "Address in block " << i;
+        cout << " (set " << i % NUM_OF_SET;
+        cout << ", way " << i / NUM_OF_SET << "):"; 
+
+        for (int j = 0; j < WORDS_PER_BLOCK; j++) {
+            int addr = (block.tag << 2) + j;
+            cout << " " << addr;
+        }
+        cout << " last used: " << counter - block.last_used << endl;
+    }
 }
 
 Block MainMem::getData(int address) {
@@ -93,11 +105,29 @@ void MainMem::putData(int address, int value) {
 
 }
 
+// Add block to empty space in given set
+void Cache::add_block_twoway(Block block, int set) {
+    int least = 0, index = 0;
+    for (int i = set; i BLOCKS_IN_CACHE; i += NUM_OF_SET) {
+        if (!cblocks[i].valid) {
+            index = i;
+            break;
+        }
+        int diff = counter - cblocks[i].last_used;
+        if (diff > least) {
+            least = diff;
+            index = i;
+        }
+    }
+    assert(set == index % NUM_OF_SET);
+
+    cblocks[index] = block;
+}
+
 // Add block to empty space.
 // If no empty space, evict least recently used
-void Cache::add_block(Block block) {
-    int least = 0;
-    int index = 0;
+void Cache::add_block_fully(Block block) {
+    int least = 0, index = 0;
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
         // End early if open block
         if (!cblocks[i].valid) {
@@ -121,6 +151,59 @@ void Cache::print_cache() {
     cout << endl;
 }
 
+int Cache::get_data_twoway(int address) {
+    cache_access();
+    int block_offset = address & 0x03;
+    int tag = address >> 2;
+    int my_set = tag % NUM_OF_SET;
+    Block block;
+    bool found = false;
+    for (int i = my_set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
+        if (cblocks[i].tag == tag) {
+            found = true;
+            cblocks[i].last_used = counter;
+            block = cblocks[i];
+            break;
+        }
+    }
+    if (!found) {
+        numMisses++;
+        block = MainMemory.getData(address);
+        block.last_used = counter;
+        block.tag = tag;
+        block.valid = true;
+        add_block_twoway(block, my_set);
+    }
+    return block.data[block_offset];
+}
+
+void Cache::put_data_twoway(int address, int value) {
+    cache_access();
+    int tag = address >> 2;
+    int my_set = tag % NUM_OF_SET;
+    bool found = false;
+    for (int i = my_set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
+        if (cblocks[i].tag == tag) {
+            found = true;
+            cblocks[i].last_used = counter;
+            break;
+        }
+    }
+    // Write-through
+    if (found) {
+        MainMemory.putData(address, value);
+    }
+    else {
+        numMisses++;
+        MainMemory.putData(address, value);
+        Block block = MainMemory.getData(address);
+        block.last_used = counter;
+        block.tag = tag;
+        block.valid = true;
+        add_block_twoway(block, my_set);
+    }
+}
+
 int Cache::get_data_fully(int address) {
     cache_access();
     int block_offset = address & 0x3;
@@ -142,7 +225,7 @@ int Cache::get_data_fully(int address) {
         block.last_used = counter;
         block.tag = tag;
         block.valid = true;
-        add_block(block);
+        add_block_fully(block);
     }
     return block.data[block_offset];
 }
@@ -171,7 +254,7 @@ void Cache::put_data_fully(int address, int value) {
         block.last_used = counter;
         block.tag = tag;
         block.valid = true;
-        add_block(block);
+        add_block_fully(block);
     }
 }
 
@@ -227,10 +310,9 @@ int Cache::getData(int address)
         data = get_data_direct(address);
     else if (cache_org == FULLY) {
         data = get_data_fully(address);
-        //print_cache();
     }
     else if (cache_org == TWOWAY)
-        data = 0;
+        data = get_data_twoway(address);
     else
         cout << "Bad cache org" << endl;
         return 0;
@@ -242,8 +324,10 @@ void Cache::putData(int address, int value)
     counter++;
     if (cache_org == DIRECT)
         put_data_direct(address, value);
-    else if (cache_org == FULLY) {
+    else if (cache_org == FULLY)
         put_data_fully(address, value);
-        //print_cache();
-    }
+    else if (cache_org == TWOWAY) 
+        put_data_twoway(address, value);
+    else
+        cout << "Bad cache org" << endl;
 }

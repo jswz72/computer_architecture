@@ -14,7 +14,6 @@ using std::endl;
 
 extern unsigned int clockX;
 extern unsigned int numMisses;
-extern unsigned int counter;
 extern int cache_org;
 
 enum cache_org {DIRECT = 0, FULLY, TWOWAY}; // FULLY=1, TWOWAY=2
@@ -31,7 +30,6 @@ void resetClock(void); // set timer to zero
 #define NUM_OF_SET 4
 //-------------------------------------
 
-
 //=================
 //==  Block
 //=================
@@ -40,6 +38,7 @@ class Block{
   Block()//constructor
   {
     valid = 0;
+    // Need to initialize for later comparison
     last_used = 0;
   }
   ~Block(){ }//destructor
@@ -86,7 +85,10 @@ private:
   void put_data_direct(int, int);
   int get_data_fully(int);
   void put_data_fully(int, int);
-  void add_block(Block block);
+  int get_data_twoway(int);
+  void put_data_twoway(int, int);
+  void add_block_fully(Block block);
+  void add_block_twoway(Block block, int set);
   void print_cache();
 };//class Cache
 
