@@ -108,7 +108,7 @@ void MainMem::putData(int address, int value) {
 // Add block to empty space in given set
 void Cache::add_block_twoway(Block block, int set) {
     int least = 0, index = 0;
-    for (int i = set; i BLOCKS_IN_CACHE; i += NUM_OF_SET) {
+    for (int i = set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
         if (!cblocks[i].valid) {
             index = i;
             break;
