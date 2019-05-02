@@ -59,7 +59,7 @@ class MainMem{
   Block blocks[BLOCKS_IN_MEMORY];
   MainMem(){ }  //constructor
   ~MainMem(){ }  //destructor
-  Block getData(int);
+  Block getData(int);   // Return block that address resides in
   void putData(int, int);
 };//class MainMem
 //-------------------------------------
@@ -77,19 +77,28 @@ public:
   Cache(){}
   ~Cache(){ }
   //=====================================
+  // Get data via the currently chosen cache organization
   int getData(int address);
+  // Put data via the currently chosen cache organization
   void putData( int address, int value );
 
 private:
+  // Get data via direct mapped cache
   int get_data_direct(int);
+  // Put data via direct mapped cache
   void put_data_direct(int, int);
+  // Get data via fully associative cache
   int get_data_fully(int);
+  // Put data via fully associative cache
   void put_data_fully(int, int);
+  // Get data via two-way associative cache
   int get_data_twoway(int);
+  // Put data via two-way associative cache
   void put_data_twoway(int, int);
+  // Add block to fully associative cache - use LRU replacement
   void add_block_fully(Block block);
+  // Add block to two-way-associative cache - use LRU replacement
   void add_block_twoway(Block block, int set);
-  void print_cache();
 };//class Cache
 
 
@@ -117,7 +126,7 @@ public:
     myCache.putData(address, value);
   }
 
-  void showCacheAddress () // show the cache contents
+  void showCacheAddress ()
   {
       if (cache_org == DIRECT)
           show_cache_direct();

@@ -81,28 +81,24 @@ void Memory::show_cache_twoway() {
     }
 }
 
+// Return block containing given address
 Block MainMem::getData(int address) {
     mem_access();
     int addr_data = address >> 2; // dont care about blockoffset
     int mem_idx = addr_data & 0x1FF; // 511
-    //int tag = addr_data >> 3;
-    //blocks[mem_idx].valid = true;
-    //blocks[mem_idx].tag = tag;
 
     return blocks[mem_idx];
 }
 
+// Write value to address in corresponding memory block
 void MainMem::putData(int address, int value) {
     mem_access();
     int addr_data = address;
     int block_offset = addr_data & 0x3;
     addr_data >>= 2;
     int mem_idx = addr_data & 0x1FF; // 511
-    //int tag = addr_data >> 3;
     blocks[mem_idx].valid = true;
-    //blocks[mem_idx].tag = tag;
     blocks[mem_idx].data[block_offset] = value;
-
 }
 
 // Add block to empty space in given set
@@ -124,10 +120,11 @@ void Cache::add_block_twoway(Block block, int set) {
     cblocks[index] = block;
 }
 
-// Add block to empty space.
-// If no empty space, evict least recently used
+// Add block to empty space in fully associative cache
+// If no empty space, evict least recently used block in cache
 void Cache::add_block_fully(Block block) {
-    int least = 0, index = 0;
+    int least = 0;  // least recent time
+    int index = 0;  // index of LRU block
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
         // End early if open block
         if (!cblocks[i].valid) {
@@ -143,14 +140,7 @@ void Cache::add_block_fully(Block block) {
     cblocks[index] = block;
 }
 
-void Cache::print_cache() {
-    cout << "Cache: ";
-    for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
-        cout << " " << cblocks[i].tag;
-    }
-    cout << endl;
-}
-
+// Get data at address using two way associative cache
 int Cache::get_data_twoway(int address) {
     cache_access();
     int block_offset = address & 0x03;
@@ -158,14 +148,17 @@ int Cache::get_data_twoway(int address) {
     int my_set = tag % NUM_OF_SET;
     Block block;
     bool found = false;
+    // Search set for block
     for (int i = my_set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
         if (cblocks[i].tag == tag) {
             found = true;
+            // Update for LRU
             cblocks[i].last_used = counter;
             block = cblocks[i];
             break;
         }
     }
+    // Add block to cache and update block data if not found
     if (!found) {
         numMisses++;
         block = MainMemory.getData(address);
@@ -177,11 +170,13 @@ int Cache::get_data_twoway(int address) {
     return block.data[block_offset];
 }
 
+// Put data value at address using two way associative cache
 void Cache::put_data_twoway(int address, int value) {
     cache_access();
     int tag = address >> 2;
     int my_set = tag % NUM_OF_SET;
     bool found = false;
+    // Search set for block
     for (int i = my_set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
         if (cblocks[i].tag == tag) {
             found = true;
@@ -193,6 +188,7 @@ void Cache::put_data_twoway(int address, int value) {
     if (found) {
         MainMemory.putData(address, value);
     }
+    // Get block, add to cache and update block data if not found
     else {
         numMisses++;
         MainMemory.putData(address, value);
@@ -204,12 +200,14 @@ void Cache::put_data_twoway(int address, int value) {
     }
 }
 
+// Get data at address using fully associative cache
 int Cache::get_data_fully(int address) {
     cache_access();
     int block_offset = address & 0x3;
     int tag = address >> 2;
     Block block;
     bool found = false;
+    // Search cache for block
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
         if (cblocks[i].tag == tag) {
             found = true;
@@ -230,6 +228,7 @@ int Cache::get_data_fully(int address) {
     return block.data[block_offset];
 }
 
+// Put data value at address using fully associative cache
 void Cache::put_data_fully(int address, int value) {
     cache_access();
     int tag = address >> 2;
@@ -245,7 +244,7 @@ void Cache::put_data_fully(int address, int value) {
     if (found) {
         MainMemory.putData(address, value);
     }
-    // Not in queue/cache
+    // Not in cache
     else {
         // Update and get it from main_memory
         numMisses++;
@@ -258,8 +257,7 @@ void Cache::put_data_fully(int address, int value) {
     }
 }
 
-//
-// Get data using direct mapped cache
+// Get data at address using direct mapped cache
 int Cache::get_data_direct(int address) {
     cache_access();
     int addr_data = address;
@@ -269,6 +267,7 @@ int Cache::get_data_direct(int address) {
     addr_data >>= 3;
     int tag = addr_data;
 
+    // Block isn't valid or not found
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
         numMisses++;
         Block block = MainMemory.getData(address);
@@ -282,7 +281,7 @@ int Cache::get_data_direct(int address) {
 }
 
 
-// Put data using direct mapped cache
+// Put data value at address using direct mapped cache
 void Cache::put_data_direct(int address, int value) {
     cache_access();
     int addr_data = address >> 2; // don't care about block offset
@@ -290,8 +289,10 @@ void Cache::put_data_direct(int address, int value) {
     addr_data >>= 3;
     int tag = addr_data;
 
+    // Block isn't valid or not found
     if (!cblocks[cache_idx].valid || cblocks[cache_idx].tag != tag) {
         numMisses++;
+        // Write then read back
         MainMemory.putData(address, value);
         Block block = MainMemory.getData(address);
         block.tag = tag;
@@ -302,9 +303,10 @@ void Cache::put_data_direct(int address, int value) {
     }
 }
 
+// Get data at address using currently chosen cache organization
 int Cache::getData(int address)
 {
-    counter++;
+    counter++;  // Increment counter to determine LRU
     int data;
     if (cache_org == DIRECT)
         data = get_data_direct(address);
@@ -313,15 +315,17 @@ int Cache::getData(int address)
     }
     else if (cache_org == TWOWAY)
         data = get_data_twoway(address);
-    else
+    else {
         cout << "Bad cache org" << endl;
         return 0;
+    }
     return data;
 }
 
+// Put data value at address using currently chosen cache organization
 void Cache::putData(int address, int value)
 {
-    counter++;
+    counter++;  // Increment counter to determine LRU
     if (cache_org == DIRECT)
         put_data_direct(address, value);
     else if (cache_org == FULLY)
