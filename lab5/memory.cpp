@@ -84,7 +84,7 @@ void Memory::show_cache_twoway() {
 // Return block containing given address
 Block MainMem::getData(int address) {
     mem_access();
-    int addr_data = address >> 2; // dont care about blockoffset
+    int addr_data = address >> 2;
     int mem_idx = addr_data & 0x1FF; // 511
 
     return blocks[mem_idx];
@@ -287,7 +287,7 @@ int Cache::get_data_direct(int address) {
 void Cache::put_data_direct(int address, int value) {
     cache_access(); 
     int block_offset = address & 0x3;
-    int addr_data = address >> 2; // don't care about block offset
+    int addr_data = address >> 2;
     int cache_idx = addr_data & 0x7;
     addr_data >>= 3;
     int tag = addr_data;
