@@ -115,8 +115,6 @@ void Cache::add_block_twoway(Block block, int set) {
             index = i;
         }
     }
-    assert(set == index % NUM_OF_SET);
-
     cblocks[index] = block;
 }
 
@@ -173,6 +171,7 @@ int Cache::get_data_twoway(int address) {
 // Put data value at address using two way associative cache
 void Cache::put_data_twoway(int address, int value) {
     cache_access();
+	int block_offset = address & 0x03;
     int tag = address >> 2;
     int my_set = tag % NUM_OF_SET;
     bool found = false;
@@ -180,6 +179,7 @@ void Cache::put_data_twoway(int address, int value) {
     for (int i = my_set; i < BLOCKS_IN_CACHE; i += NUM_OF_SET) {
         if (cblocks[i].tag == tag) {
             found = true;
+			cblocks[i].data[block_offset] = value;
             cblocks[i].last_used = counter;
             break;
         }
@@ -231,11 +231,13 @@ int Cache::get_data_fully(int address) {
 // Put data value at address using fully associative cache
 void Cache::put_data_fully(int address, int value) {
     cache_access();
+	int block_offset = address & 0x03;
     int tag = address >> 2;
     bool found = false;
     for (int i = 0; i < BLOCKS_IN_CACHE; i++) {
         if (cblocks[i].tag == tag) {
             found = true;
+			cblocks[i].data[block_offset] = value;
             cblocks[i].last_used = counter;
             break;
         }
@@ -284,6 +286,7 @@ int Cache::get_data_direct(int address) {
 // Put data value at address using direct mapped cache
 void Cache::put_data_direct(int address, int value) {
     cache_access();
+	int block_offset = address & 0x3;
     int addr_data = address >> 2; // don't care about block offset
     int cache_idx = addr_data & 0x7;
     addr_data >>= 3;
@@ -299,7 +302,8 @@ void Cache::put_data_direct(int address, int value) {
         block.valid = true;
         cblocks[cache_idx] = block;
     } else {
-        MainMemory.putData(address, value);
+		cblocks[cache_idx].data[block_offset] = value;
+		MainMemory.putData(address, value);
     }
 }
 
@@ -318,7 +322,7 @@ int Cache::getData(int address)
     else {
         cout << "Bad cache org" << endl;
         return 0;
-    }
+	}
     return data;
 }
 
